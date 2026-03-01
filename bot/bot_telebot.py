@@ -587,14 +587,6 @@ class PinterestBot:
                     callback_data=self.CALLBACK_NEXT
                 ))
         
-        # Always add Stop and New Search buttons
-        keyboard.add(
-            types.InlineKeyboardButton(
-                self.get_text('new_search', message),
-                callback_data=self.CALLBACK_NEW_SEARCH
-            )
-        )
-        
         # Send navigation message
         current = session['current_offset'] if session else len(media_items)
         total = session['total_images'] if session else len(media_items)

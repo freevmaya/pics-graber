@@ -32,7 +32,7 @@ class Config:
     DOWNLOAD_TIMEOUT = int(os.getenv('DOWNLOAD_TIMEOUT', '300'))
     TEMP_DOWNLOAD_DIR = os.getenv('TEMP_DOWNLOAD_DIR', 'temp_downloads')
     INCLUDE_VIDEO = os.getenv('INCLUDE_VIDEO', False)
-    
+
     PREVIEW_ENABLED = os.getenv('PREVIEW_ENABLED', 'true').lower() == 'true'
     PREVIEW_MAX_WIDTH = int(os.getenv('PREVIEW_MAX_WIDTH', '800'))
     PREVIEW_MAX_HEIGHT = int(os.getenv('PREVIEW_MAX_HEIGHT', '600'))
@@ -42,4 +42,3 @@ class Config:
     # Paths
     BASE_DIR = Path(__file__).parent
     DOWNLOAD_DIR = BASE_DIR / TEMP_DOWNLOAD_DIR
-    PREVIEW_DIR = DOWNLOAD_DIR / PREVIEW_SUBDIR

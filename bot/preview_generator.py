@@ -19,16 +19,10 @@ class PreviewGenerator:
     
     def __init__(self):
         """Initialize preview generator."""
-        self.preview_dir = Config.PREVIEW_DIR
         self.max_width = Config.PREVIEW_MAX_WIDTH
         self.max_height = Config.PREVIEW_MAX_HEIGHT
         self.quality = Config.PREVIEW_QUALITY
         self.enabled = Config.PREVIEW_ENABLED
-        
-        # Create preview directory if it doesn't exist
-        if self.enabled:
-            self.preview_dir.mkdir(parents=True, exist_ok=True)
-            logger.info(f"Preview directory: {self.preview_dir}")
     
     def generate_preview(self, image_path: Path) -> Optional[str]:
         """
@@ -45,8 +39,11 @@ class PreviewGenerator:
                 return None
             
             # Generate preview filename
-            preview_filename = f"preview_{image_path.stem}.jpg"
-            preview_path = self.preview_dir / preview_filename
+            preview_filename = f"{image_path.stem}.jpg"
+            preview_dir = image_path.parent / Config.PREVIEW_SUBDIR
+            preview_dir.mkdir(exist_ok=True)
+            
+            preview_path = preview_dir / preview_filename
             
             # If preview already exists, return it
             if preview_path.exists():
@@ -100,25 +97,3 @@ class PreviewGenerator:
         new_height = int(height * ratio)
         
         return new_width, new_height
-    
-    def cleanup_old_previews(self, max_age_days: int = 7) -> int:
-        """Remove preview files older than max_age_days. Returns number of files removed."""
-        if not self.enabled or not self.preview_dir.exists():
-            return 0
-        
-        import time
-        current_time = time.time()
-        max_age_seconds = max_age_days * 24 * 60 * 60
-        removed_count = 0
-        
-        for preview_file in self.preview_dir.glob("preview_*.jpg"):
-            file_age = current_time - preview_file.stat().st_mtime
-            if file_age > max_age_seconds:
-                try:
-                    preview_file.unlink()
-                    removed_count += 1
-                    logger.info(f"Removed old preview: {preview_file}")
-                except Exception as e:
-                    logger.error(f"Error removing preview {preview_file}: {e}")
-        
-        return removed_count
