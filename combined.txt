@@ -812,7 +812,7 @@ class PinterestBot:
             downloaded = self.downloader.download_images(
                 query,
                 Config.MAX_IMAGES_PER_REQUEST,
-                include_videos=True
+                include_videos=Config.INCLUDE_VIDEO
             )
             
             if not downloaded:
@@ -933,17 +933,34 @@ class PinterestBot:
         
         for item in media_items:
             try:
-                if not item['local_path'] or not Path(item['local_path']).exists():
+                # Determine which file to send (preview for images if available)
+                file_to_send = None
+                file_type = item.get('image_type', 'image')
+                
+                if file_type == 'image' and Config.PREVIEW_ENABLED and item.get('preview_path'):
+                    # Send preview for images
+                    preview_path = item['preview_path']
+                    if Path(preview_path).exists():
+                        file_to_send = preview_path
+                        file_size = os.path.getsize(preview_path)
+                        logger.info(f"Sending preview: {preview_path}")
+                    else:
+                        # Fallback to original if preview missing
+                        file_to_send = item['local_path']
+                        file_size = os.path.getsize(file_to_send) if file_to_send and Path(file_to_send).exists() else 0
+                else:
+                    # Send original for videos or when preview disabled
+                    file_to_send = item['local_path']
+                    file_size = os.path.getsize(file_to_send) if file_to_send and Path(file_to_send).exists() else 0
+                
+                if not file_to_send or not Path(file_to_send).exists():
                     self.bot.send_message(
                         user_id,
                         self.get_text('file_not_found', message, filename=item.get('file_name', 'unknown'))
                     )
                     continue
                 
-                file_path = item['local_path']
-                file_size = os.path.getsize(file_path)
-                
-                # Get media type from database field 'image_type'
+                # Get media type
                 media_type = item.get('image_type', 'image')
                 
                 # Create caption with metadata
@@ -960,6 +977,11 @@ class PinterestBot:
                         info.append(self.format_duration(item['duration']))
                     if info:
                         caption_parts.append(f"📹 {' • '.join(info)}")
+                elif media_type == 'image' and Config.PREVIEW_ENABLED and item.get('preview_path'):
+                    # Add preview indicator to caption
+                    if item.get('width') and item.get('height') and item['width'] > 0 and item['height'] > 0:
+                        caption_parts.append(f"🖼️ {item['width']}x{item['height']}")
+                    caption_parts.append("🔍 Preview")
                 
                 # Add file size
                 if file_size > 0:
@@ -968,10 +990,9 @@ class PinterestBot:
                 caption = ' | '.join(caption_parts) if caption_parts else None
                 
                 # Send based on type and size
-                with open(file_path, 'rb') as media_file:
+                with open(file_to_send, 'rb') as media_file:
                     if media_type == 'video':
                         # Send as video
-                        print(item)
                         if file_size <= self.MAX_VIDEO_SIZE:
                             self.bot.send_video(
                                 user_id,
@@ -991,7 +1012,7 @@ class PinterestBot:
                                 visible_file_name=item['file_name']
                             )
                     else:
-                        # Send as photo
+                        # Send as photo (using preview or original)
                         if file_size <= self.MAX_PHOTO_SIZE:
                             self.bot.send_photo(
                                 user_id,
@@ -1017,20 +1038,20 @@ class PinterestBot:
                     self.get_text('failed_to_send', message, filename=item.get('file_name', 'unknown'))
                 )
         
-        # Mark successfully sent images (only those that actually sent)
+        # Mark successfully sent images
         if sent_ids:
             self.db.mark_images_as_sent(sent_ids)
         
-        # Get updated session (only offset changed, total_images is the same!)
+        # Get updated session
         session = self.db.get_user_session(user_id)
         
         # Create navigation keyboard
         keyboard = types.InlineKeyboardMarkup()
         
-        # Calculate if there are more items to show using FIXED total_images
+        # Calculate if there are more items to show
         if session:
             current_offset = session['current_offset']
-            total_items = session['total_images']  # THIS IS CONSTANT!
+            total_items = session['total_images']
             
             # Add Next button if there are more items
             if current_offset < total_items:
@@ -1041,19 +1062,10 @@ class PinterestBot:
                     callback_data=self.CALLBACK_NEXT
                 ))
         
-        # Always add Stop and New Search buttons
-        keyboard.add(
-            types.InlineKeyboardButton(
-                self.get_text('new_search', message),
-                callback_data=self.CALLBACK_NEW_SEARCH
-            )
-        )
-        
-        # Send navigation message with FIXED total_items
+        # Send navigation message
         current = session['current_offset'] if session else len(media_items)
         total = session['total_images'] if session else len(media_items)
         
-        # Add progress info
         progress_text = self.get_text('progress', message, current=current, total=total)
         
         # Add remaining count if there are more
@@ -1172,6 +1184,12 @@ class Config:
     DOWNLOAD_TIMEOUT = int(os.getenv('DOWNLOAD_TIMEOUT', '300'))
     TEMP_DOWNLOAD_DIR = os.getenv('TEMP_DOWNLOAD_DIR', 'temp_downloads')
     INCLUDE_VIDEO = os.getenv('INCLUDE_VIDEO', False)
+
+    PREVIEW_ENABLED = os.getenv('PREVIEW_ENABLED', 'true').lower() == 'true'
+    PREVIEW_MAX_WIDTH = int(os.getenv('PREVIEW_MAX_WIDTH', '800'))
+    PREVIEW_MAX_HEIGHT = int(os.getenv('PREVIEW_MAX_HEIGHT', '600'))
+    PREVIEW_QUALITY = int(os.getenv('PREVIEW_QUALITY', '85'))
+    PREVIEW_SUBDIR = os.getenv('PREVIEW_SUBDIR', 'preview')
     
     # Paths
     BASE_DIR = Path(__file__).parent
@@ -1184,8 +1202,7 @@ class Config:
 # ============================================================
 
 # ============================================================
-# FILE: database.py (UPDATED)
-# TYPE: .PY
+# FILE: database.py (UPDATED WITH PREVIEW SUPPORT)
 # ============================================================
 
 """Database management module with language support."""
@@ -1252,13 +1269,14 @@ class DatabaseManager:
             ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
         """)
         
-        # Downloaded images cache
+        # Downloaded images cache (ADDED preview_path column)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS downloaded_images (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 search_cache_id INT NOT NULL,
                 image_url VARCHAR(1000) NOT NULL,
                 local_path VARCHAR(500),
+                preview_path VARCHAR(500),
                 file_name VARCHAR(255),
                 file_size INT,
                 width INT,
@@ -1313,7 +1331,6 @@ class DatabaseManager:
     def update_user_language(self, user_id: int, language_code: str) -> None:
         """Update user's language preference."""
         cursor = self.connection.cursor()
-
         cursor.execute("""
             UPDATE users 
             SET language_code = %s
@@ -1349,7 +1366,7 @@ class DatabaseManager:
         query_md5 = self.get_query_md5(query)
         cursor = self.connection.cursor(dictionary=True)
         
-        cursor.execute(f"SELECT * FROM search_cache WHERE query_md5 = '{query_md5}' ORDER BY created_at DESC LIMIT 1")
+        cursor.execute("SELECT * FROM search_cache WHERE query_md5 = %s ORDER BY created_at DESC LIMIT 1", (query_md5,))
         
         return cursor.fetchone()
     
@@ -1367,7 +1384,7 @@ class DatabaseManager:
         return cursor.lastrowid
     
     def save_images_to_cache(self, search_cache_id: int, images: List[Dict]) -> int:
-        """Save downloaded images to cache."""
+        """Save downloaded images to cache with preview paths."""
         cursor = self.connection.cursor()
         saved_count = 0
         
@@ -1375,11 +1392,12 @@ class DatabaseManager:
             try:
                 cursor.execute("""
                     INSERT INTO downloaded_images 
-                    (search_cache_id, image_url, local_path, file_name, file_size, 
+                    (search_cache_id, image_url, local_path, preview_path, file_name, file_size, 
                      width, height, image_type, caption)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON DUPLICATE KEY UPDATE
                     local_path = VALUES(local_path),
+                    preview_path = VALUES(preview_path),
                     file_size = VALUES(file_size),
                     width = VALUES(width),
                     height = VALUES(height),
@@ -1388,6 +1406,7 @@ class DatabaseManager:
                     search_cache_id,
                     img.get('url', ''),
                     img.get('local_path'),
+                    img.get('preview_path'),  # NEW: save preview path
                     img.get('file_name'),
                     img.get('file_size'),
                     img.get('width'),
@@ -1415,7 +1434,6 @@ class DatabaseManager:
     
     def get_unsent_images(self, search_cache_id: int, limit: int, offset: int = 0) -> List[Dict]:
         """Get unsent images for pagination."""
-        print(f"Get unsent image {search_cache_id}, {offset}, {limit}")
         cursor = self.connection.cursor(dictionary=True)
 
         where = 'search_cache_id = %s AND is_sent = FALSE'
@@ -1536,8 +1554,6 @@ class DatabaseManager:
                     SET {', '.join(update_parts)}
                     WHERE user_id = %s
                 """
-
-                print(query);
                 params.append(user_id)
                 cursor.execute(query, tuple(params))
         else:
@@ -1928,11 +1944,10 @@ if __name__ == "__main__":
 # ============================================================
 
 # ============================================================
-# FILE: pinterest_downloader.py (UPDATED WITH VIDEO SUPPORT)
-# TYPE: .PY
-#============================================================
+# FILE: pinterest_downloader.py (UPDATED WITH PREVIEW SUPPORT)
+# ============================================================
 
-"""Pinterest downloader module with video support."""
+"""Pinterest downloader module with video support and preview generation."""
 
 import os
 import subprocess
@@ -1942,6 +1957,7 @@ from typing import List, Dict, Optional
 import hashlib
 import re
 from config import Config
+from preview_generator import PreviewGenerator
 
 class PinterestDownloader:
     """Handles Pinterest image and video downloading via pinterest-dl."""
@@ -1951,6 +1967,7 @@ class PinterestDownloader:
         self.download_dir = Config.DOWNLOAD_DIR
         self.download_dir.mkdir(exist_ok=True)
         self.timeout = Config.DOWNLOAD_TIMEOUT
+        self.preview_generator = PreviewGenerator()
     
     @staticmethod
     def check_pinterest_dl() -> bool:
@@ -2011,11 +2028,23 @@ class PinterestDownloader:
             # Scan downloaded files
             downloaded_media = self._scan_downloaded_files(download_path, query)
             
+            # Generate previews for images
+            if Config.PREVIEW_ENABLED:
+                for media in downloaded_media:
+                    if media['type'] == 'image' and media.get('local_path'):
+                        preview_path = self.preview_generator.generate_preview(
+                            Path(media['local_path'])
+                        )
+                        if preview_path:
+                            media['preview_path'] = preview_path
+            
             print(f"✓ Downloaded {len(downloaded_media)} items")
             images = [m for m in downloaded_media if m['type'] == 'image']
             videos = [m for m in downloaded_media if m['type'] == 'video']
             if images:
                 print(f"  - Images: {len(images)}")
+                if Config.PREVIEW_ENABLED:
+                    print(f"  - Previews: {len([m for m in images if m.get('preview_path')])}")
             if videos:
                 print(f"  - Videos: {len(videos)}")
             
@@ -2056,14 +2085,13 @@ class PinterestDownloader:
                 media_files.append({
                     'url': f"local://{file_path.name}",
                     'local_path': str(file_path),
+                    'preview_path': None,  # Will be filled after preview generation
                     'file_name': file_path.name,
                     'file_size': stat.st_size,
                     'width': width,
                     'height': height,
                     'type': 'image',
                     'caption': caption,
-                    'duration': duration if file_ext in video_extensions else None,
-                    'thumbnail': thumbnail if file_ext in video_extensions else None
                 })
             
             # Check if it's a video
@@ -2080,6 +2108,7 @@ class PinterestDownloader:
                 media_files.append({
                     'url': f"local://{file_path.name}",
                     'local_path': str(file_path),
+                    'preview_path': None,  # Videos don't get previews (for now)
                     'file_name': file_path.name,
                     'file_size': stat.st_size,
                     'width': width,
@@ -2163,1075 +2192,109 @@ class PinterestDownloader:
 
 
 # ============================================================
-# FILE: .\graber\examples\basic_scraping.py
+# FILE: .\bot\preview_generator.py
 # TYPE: .PY
 # ============================================================
 
-"""
-Example: Basic Scraping and Downloading
-========================================
-
-This example demonstrates the simplest way to scrape and download
-images from Pinterest using the high-level API.
-"""
-
-from pinterest_dl import PinterestDL
-
-# ============================================================================
-# Configuration - Change these URLs to your actual Pinterest links
-# ============================================================================
-PIN_URL = "https://www.pinterest.com/pin/12345678/"
-BOARD_URL = "https://www.pinterest.com/username/board-name/"  # Replace with actual board URL
-
-
-def example_1_simple_pin_scrape():
-    """Scrape a single pin and download its images."""
-    print("Example 1: Simple Pin Scrape")
-    print("-" * 50)
-
-    # Scrape and download in one step
-    images = PinterestDL.with_api().scrape_and_download(
-        url=PIN_URL,
-        output_dir="downloads/pin",
-        num=10,
-    )
-
-    if images:
-        print(f"> Downloaded {len(images)} images to downloads/pin/")
-    else:
-        print("Warning: No images downloaded")
-    print()
-
-
-def example_2_board_scrape():
-    """Scrape an entire board."""
-    print("Example 2: Board Scrape")
-    print("-" * 50)
-
-    images = PinterestDL.with_api(
-        verbose=False,  # Disable detailed logging
-        timeout=5,  # Set request timeout to 5 seconds
-    ).scrape_and_download(
-        url=BOARD_URL,
-        output_dir="downloads/board",
-        num=50,  # Download up to 50 images
-        delay=0.5,  # Add delay between requests
-    )
-
-    if images:
-        print(f"> Downloaded {len(images)} images from board")
-    else:
-        print("Warning: No images downloaded")
-    print()
-
-
-def example_3_with_resolution_filter():
-    """Download only high-resolution images."""
-    print("Example 3: With Resolution Filter")
-    print("-" * 50)
-
-    images = PinterestDL.with_api().scrape_and_download(
-        url=PIN_URL,
-        output_dir="downloads/high_res",
-        num=20,
-        min_resolution=(1024, 1024),  # Only download images >= 1024x1024
-    )
-
-    if images:
-        print(f"> Downloaded {len(images)} high-resolution images")
-    else:
-        print("Warning: No high-resolution images found")
-    print()
-
-
-def example_4_with_captions():
-    """Download images with caption files."""
-    print("Example 4: With Captions")
-    print("-" * 50)
-
-    # Download with txt captions (alt text in separate .txt files)
-    images = PinterestDL.with_api().scrape_and_download(
-        url=PIN_URL,
-        output_dir="downloads/with_captions",
-        num=10,
-        caption="txt",  # Options: 'txt', 'json', 'metadata', 'none'
-    )
-
-    if images:
-        print(f"> Downloaded {len(images)} images with .txt caption files")
-    else:
-        print("Warning: No images downloaded")
-    print()
-
-
-def example_5_with_cache():
-    """Cache scraped data to JSON for reuse."""
-    print("Example 5: With Cache")
-    print("-" * 50)
-
-    images = PinterestDL.with_api().scrape_and_download(
-        url=PIN_URL,
-        output_dir="downloads/cached",
-        num=15,
-        cache_path="cache/scraped_data.json",  # Save scraped metadata
-    )
-
-    if images:
-        print(f"> Downloaded {len(images)} images")
-    else:
-        print("Warning: No images downloaded")
-    print("> Scraped metadata cached to cache/scraped_data.json")
-    print()
-
-
-def example_6_with_video_streams():
-    """Download video streams if available."""
-    print("Example 6: With Video Streams")
-    print("-" * 50)
-
-    images = PinterestDL.with_api().scrape_and_download(
-        url=PIN_URL,
-        output_dir="downloads/videos",
-        num=10,
-        download_streams=True,  # Download video streams as .mp4
-    )
-
-    if images:
-        print(f"> Downloaded {len(images)} items (images and videos)")
-    else:
-        print("Warning: No items downloaded")
-    print()
-
-
-def example_7_verbose_mode():
-    """Enable verbose logging for debugging."""
-    print("Example 7: Verbose Mode")
-    print("-" * 50)
-
-    images = PinterestDL.with_api(
-        verbose=True,  # Show detailed logs
-    ).scrape_and_download(
-        url=PIN_URL,
-        output_dir="downloads/verbose",
-        num=5,
-    )
-
-    if images:
-        print(f"> Downloaded {len(images)} images with verbose logging")
-    else:
-        print("Warning: No images downloaded")
-    print()
-
-
-if __name__ == "__main__":
-    print("=" * 50)
-    print("Pinterest-DL Basic Scraping Examples")
-    print("=" * 50)
-    print()
-
-    # Run examples (comment out the ones you don't need)
-    example_1_simple_pin_scrape()
-    '''
-    example_2_board_scrape()
-    example_3_with_resolution_filter()
-    example_4_with_captions()
-    example_5_with_cache()
-    example_6_with_video_streams()
-    example_7_verbose_mode()
-    '''
-
-    print("=" * 50)
-    print("All examples completed!")
-    print("=" * 50)
-
-
 # ============================================================
-# FILE: .\graber\examples\debug_pinterest.py
-# TYPE: .PY
+# FILE: preview_generator.py
 # ============================================================
 
-#!/usr/bin/env python3
-"""
-Расширенная диагностика Pinterest API
-"""
+"""Preview image generation module."""
 
-import requests
-import json
-import re
-import gzip
-import brotli
-from urllib.parse import quote
-import zlib
-
-def decompress_content(response):
-    """Декомпрессия содержимого ответа"""
-    content_encoding = response.headers.get('Content-Encoding', '')
-    content = response.content
-    
-    print(f"Content-Encoding: {content_encoding}")
-    print(f"Content-Type: {response.headers.get('Content-Type', 'unknown')}")
-    print(f"Content-Length: {len(content)} bytes")
-    
-    # Пробуем декомпрессию
-    try:
-        if 'gzip' in content_encoding:
-            content = gzip.decompress(content)
-            print("✓ GZIP decompressed successfully")
-        elif 'br' in content_encoding or 'brotli' in content_encoding:
-            content = brotli.decompress(content)
-            print("✓ Brotli decompressed successfully")
-        elif 'deflate' in content_encoding:
-            content = zlib.decompress(content)
-            print("✓ Deflate decompressed successfully")
-    except Exception as e:
-        print(f"✗ Decompression error: {e}")
-    
-    return content
-
-def test_pinterest_search(query):
-    print(f"\n{'='*60}")
-    print(f"ТЕСТИРОВАНИЕ ПОИСКА PINTEREST: '{query}'")
-    print(f"{'='*60}\n")
-    
-    # Формируем URL
-    encoded_query = quote(query)
-    url = f"https://www.pinterest.com/search/pins/?q={encoded_query}"
-    
-    # Заголовки как у реального браузера
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9,ru;q=0.8',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Cache-Control': 'max-age=0',
-    }
-    
-    # Сессия с cookies
-    session = requests.Session()
-    
-    # Сначала заходим на главную для получения cookies
-    print("1. Получаем cookies с главной страницы...")
-    try:
-        home_response = session.get('https://www.pinterest.com/', headers=headers, timeout=10)
-        print(f"   Статус: {home_response.status_code}")
-        print(f"   Cookies: {len(session.cookies)} получено")
-    except Exception as e:
-        print(f"   Ошибка: {e}")
-    
-    print(f"\n2. Выполняем поисковой запрос...")
-    try:
-        response = session.get(url, headers=headers, timeout=15, allow_redirects=True)
-        print(f"   Статус: {response.status_code}")
-        print(f"   URL после редиректов: {response.url}")
-        
-        if response.status_code == 200:
-            # Декомпрессия
-            content = decompress_content(response)
-            
-            # Пробуем декодировать как текст
-            try:
-                html = content.decode('utf-8')
-                print(f"\n3. Анализ HTML (длина: {len(html)} символов)...")
-                
-                # Сохраняем HTML
-                with open("pinterest_debug.html", "w", encoding="utf-8") as f:
-                    f.write(html)
-                print("   ✓ HTML сохранен в pinterest_debug.html")
-                
-                # Ищем JSON данные
-                json_patterns = [
-                    (r'<script id="__PWS_INITIAL_PROPS__" type="application/json">(.*?)</script>', 
-                     "__PWS_INITIAL_PROPS__"),
-                    (r'<script data-relay-response="true" type="application/json">(.*?)</script>',
-                     "relay-response"),
-                    (r'<script id="__PWS_DATA__" type="application/json">(.*?)</script>',
-                     "__PWS_DATA__"),
-                    (r'<script>window\.__PWS_DATA__\s*=\s*({.*?});?\s*</script>',
-                     "window.__PWS_DATA__"),
-                    (r'<script>window\.__INITIAL_STATE__\s*=\s*({.*?});?\s*</script>',
-                     "__INITIAL_STATE__"),
-                ]
-                
-                found_json = False
-                for pattern, name in json_patterns:
-                    matches = re.findall(pattern, html, re.DOTALL)
-                    if matches:
-                        print(f"\n   ✓ Найдены данные {name}: {len(matches)} блоков")
-                        found_json = True
-                        
-                        # Сохраняем первый блок
-                        try:
-                            json_data = json.loads(matches[0])
-                            with open(f"pinterest_{name}.json", "w", encoding="utf-8") as f:
-                                json.dump(json_data, f, indent=2, ensure_ascii=False)
-                            print(f"     Сохранено в pinterest_{name}.json")
-                            
-                            # Анализируем структуру
-                            analyze_json_structure(json_data, name)
-                            
-                        except json.JSONDecodeError as e:
-                            print(f"     ✗ Ошибка парсинга JSON: {e}")
-                            # Сохраняем сырые данные
-                            with open(f"pinterest_{name}_raw.json", "w", encoding="utf-8") as f:
-                                f.write(matches[0][:1000])  # Первые 1000 символов
-                
-                if not found_json:
-                    print("\n   ✗ JSON данные не найдены")
-                    
-                    # Ищем другие признаки
-                    if 'pinterest' in html.lower():
-                        print("   ✓ Страница содержит 'pinterest'")
-                    
-                    # Проверяем наличие пинов в HTML
-                    pin_patterns = [
-                        r'data-test-pin-id=["\'](\d+)',
-                        r'class="[^"]*pin[^"]*"',
-                        r'<div[^>]*data-test-id="pin"',
-                    ]
-                    
-                    for pattern in pin_patterns:
-                        pin_matches = re.findall(pattern, html, re.IGNORECASE)
-                        if pin_matches:
-                            print(f"   ✓ Найдены признаки пинов: {len(pin_matches)} совпадений")
-                
-                # Сохраняем заголовки ответа
-                with open("response_headers.txt", "w", encoding="utf-8") as f:
-                    for key, value in response.headers.items():
-                        f.write(f"{key}: {value}\n")
-                print("\n   ✓ Заголовки сохранены в response_headers.txt")
-                
-            except UnicodeDecodeError:
-                print("\n   ✗ Не удалось декодировать как UTF-8, сохраняем как бинарный")
-                with open("pinterest_debug.bin", "wb") as f:
-                    f.write(content)
-                
-        else:
-            print(f"\n   ✗ Ошибка: статус {response.status_code}")
-            
-    except Exception as e:
-        print(f"\n   ✗ Ошибка запроса: {e}")
-        import traceback
-        traceback.print_exc()
-
-def analyze_json_structure(data, name, depth=0, max_depth=3):
-    """Анализ структуры JSON"""
-    if depth == 0:
-        print(f"\n   Анализ структуры {name}:")
-    
-    if depth > max_depth:
-        return
-    
-    if isinstance(data, dict):
-        keys = list(data.keys())
-        if keys:
-            print(f"{'  ' * depth}   Ключи: {keys[:10]}{'...' if len(keys) > 10 else ''}")
-        
-        # Ищем пины
-        for key in keys:
-            if 'pin' in key.lower():
-                print(f"{'  ' * depth}   ✓ Найден ключ с 'pin': {key}")
-            
-            # Рекурсивно анализируем значения
-            if isinstance(data[key], (dict, list)):
-                analyze_json_structure(data[key], name, depth + 1, max_depth)
-                
-    elif isinstance(data, list) and depth < max_depth:
-        print(f"{'  ' * depth}   Длина списка: {len(data)}")
-        if data and len(data) > 0:
-            analyze_json_structure(data[0], name, depth + 1, max_depth)
-
-def test_alternative_apis():
-    """Тестирование альтернативных API"""
-    print(f"\n{'='*60}")
-    print("ТЕСТИРОВАНИЕ АЛЬТЕРНАТИВНЫХ API")
-    print(f"{'='*60}\n")
-    
-    # 1. Пробуем RSS feed
-    print("1. RSS Feed:")
-    rss_url = "https://www.pinterest.com/search/pins/?q=landscape&rs=typed&feed=yes"
-    try:
-        response = requests.get(rss_url, headers={'User-Agent': 'Mozilla/5.0'})
-        print(f"   Статус: {response.status_code}")
-        if 'xml' in response.headers.get('Content-Type', ''):
-            print("   ✓ Похоже на RSS/XML")
-    except Exception as e:
-        print(f"   ✗ Ошибка: {e}")
-    
-    # 2. Пробуем мобильную версию
-    print("\n2. Мобильная версия:")
-    mobile_url = "https://mobile.pinterest.com/search/pins/?q=landscape"
-    try:
-        response = requests.get(mobile_url, headers={'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)'})
-        print(f"   Статус: {response.status_code}")
-    except Exception as e:
-        print(f"   ✗ Ошибка: {e}")
-
-def check_library_version():
-    """Проверка версии библиотеки pinterest-dl"""
-    print(f"\n{'='*60}")
-    print("ПРОВЕРКА БИБЛИОТЕКИ pinterest-dl")
-    print(f"{'='*60}\n")
-    
-    try:
-        import pinterest_dl
-        print(f"Версия: {getattr(pinterest_dl, '__version__', 'unknown')}")
-        print(f"Путь: {pinterest_dl.__file__}")
-        
-        # Проверяем доступные классы
-        from pinterest_dl import PinterestDL
-        print(f"\nКласс PinterestDL:")
-        methods = [m for m in dir(PinterestDL) if not m.startswith('_')]
-        print(f"  Методы класса: {methods}")
-        
-        # Пробуем создать экземпляр
-        p = PinterestDL()
-        print(f"\nЭкземпляр PinterestDL:")
-        instance_methods = [m for m in dir(p) if not m.startswith('_') and callable(getattr(p, m))]
-        print(f"  Доступные методы: {instance_methods}")
-        
-        # Проверяем with_api
-        if hasattr(PinterestDL, 'with_api'):
-            p_api = PinterestDL.with_api()
-            print(f"\nPinterestDL.with_api():")
-            api_methods = [m for m in dir(p_api) if not m.startswith('_') and callable(getattr(p_api, m))]
-            print(f"  Доступные методы: {api_methods}")
-            
-    except ImportError as e:
-        print(f"✗ Библиотека не установлена: {e}")
-    except Exception as e:
-        print(f"✗ Ошибка при проверке: {e}")
-
-if __name__ == "__main__":
-    # Установка необходимых библиотек
-    try:
-        import brotli
-    except ImportError:
-        print("Устанавливаем brotli...")
-        import subprocess
-        subprocess.check_call(['pip', 'install', 'brotli'])
-        import brotli
-    
-    # Запуск тестов
-    test_pinterest_search("красивые пейзажи")
-    test_alternative_apis()
-    check_library_version()
-    
-    print(f"\n{'='*60}")
-    print("ДИАГНОСТИКА ЗАВЕРШЕНА")
-    print(f"{'='*60}")
-
-
-# ============================================================
-# FILE: .\graber\examples\test_search.py
-# TYPE: .PY
-# ============================================================
-
-#!/usr/bin/env python3
-"""
-Тестовый скрипт для проверки поиска Pinterest
-"""
-
-import requests
-import json
-import re
-from urllib.parse import quote
-
-def test_pinterest_search(query):
-    print(f"Testing search for: {query}")
-    print("-" * 50)
-    
-    # Формируем URL
-    encoded_query = quote(query)
-    url = f"https://www.pinterest.com/search/pins/?q={encoded_query}"
-    
-    # Заголовки как у браузера
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-    }
-    
-    try:
-        # Выполняем запрос
-        response = requests.get(url, headers=headers, timeout=10)
-        print(f"Status code: {response.status_code}")
-        
-        if response.status_code == 200:
-            # Ищем JSON данные
-            html = response.text
-            
-            # Паттерны для поиска данных
-            patterns = [
-                r'<script data-relay-response="true" type="application/json">(.*?)</script>',
-                r'<script id="__PWS_DATA__" type="application/json">(.*?)</script>',
-            ]
-            
-            found_data = False
-            for i, pattern in enumerate(patterns):
-                matches = re.findall(pattern, html, re.DOTALL)
-                if matches:
-                    print(f"\nFound {len(matches)} JSON data blocks (pattern {i+1})")
-                    found_data = True
-                    
-                    # Пробуем распарсить первый блок
-                    try:
-                        data = json.loads(matches[0])
-                        print("Successfully parsed JSON data")
-                        
-                        # Ищем пины в данных
-                        pin_count = 0
-                        
-                        # Рекурсивный поиск ключа 'pin'
-                        def find_pins(obj, depth=0):
-                            nonlocal pin_count
-                            if depth > 10:
-                                return
-                            
-                            if isinstance(obj, dict):
-                                if 'pin' in obj and isinstance(obj['pin'], dict):
-                                    pin_count += 1
-                                for key, value in obj.items():
-                                    find_pins(value, depth + 1)
-                            elif isinstance(obj, list):
-                                for item in obj:
-                                    find_pins(item, depth + 1)
-                        
-                        find_pins(data)
-                        print(f"Found approximately {pin_count} pins in data")
-                        
-                        # Показываем структуру
-                        print("\nData structure keys:")
-                        if isinstance(data, dict):
-                            print(list(data.keys())[:10])
-                        
-                    except json.JSONDecodeError as e:
-                        print(f"JSON decode error: {e}")
-            
-            if not found_data:
-                print("No JSON data blocks found in HTML")
-                
-                # Сохраняем HTML для анализа
-                with open("debug_search.html", "w", encoding="utf-8") as f:
-                    f.write(html)
-                print("Saved HTML to debug_search.html for analysis")
-        
-    except Exception as e:
-        print(f"Error: {e}")
-
-if __name__ == "__main__":
-    test_pinterest_search("красивые пейзажи")
-
-
-# ============================================================
-# FILE: .\graber\pinterest-dl.py
-# TYPE: .PY
-# ============================================================
-
-#!/usr/bin/env python3
-"""
-Pinterest Downloader Wrapper - обертка для pinterest-dl с кешированием в MySQL
-Использование: python pinterest-dl-wrapper.py search "котики" -o downloads --video
-"""
-
-import argparse
+from pathlib import Path
+from PIL import Image
+import logging
+from typing import Optional, Tuple
 import os
-import hashlib
-import subprocess
-import mysql.connector
-from mysql.connector import Error
-import json
-import time
-from datetime import datetime
-import sys
-from dotenv import load_dotenv
-import pathlib
-import re
 
-# Загрузка переменных окружения из .env файла
-load_dotenv()
+from config import Config
 
-class PinterestDLWrapper:
-    def __init__(self, db_config=None):
+logger = logging.getLogger(__name__)
+
+class PreviewGenerator:
+    """Generates preview images for downloaded media."""
+    
+    def __init__(self):
+        """Initialize preview generator."""
+        self.max_width = Config.PREVIEW_MAX_WIDTH
+        self.max_height = Config.PREVIEW_MAX_HEIGHT
+        self.quality = Config.PREVIEW_QUALITY
+        self.enabled = Config.PREVIEW_ENABLED
+    
+    def generate_preview(self, image_path: Path) -> Optional[str]:
         """
-        Инициализация обертки
+        Generate preview image.
+        Returns path to preview image or None if failed.
         """
-        if db_config:
-            self.db_config = db_config
-        else:
-            # Загрузка конфигурации из переменных окружения
-            self.db_config = {
-                'host': os.getenv('DB_HOST', 'localhost'),
-                'port': os.getenv('DB_PORT', '3306'),
-                'database': os.getenv('DB_NAME', 'pinterest_cache'),
-                'user': os.getenv('DB_USER', 'root'),
-                'password': os.getenv('DB_PASSWORD', ''),
-                'charset': os.getenv('DB_CHARSET', 'utf8mb4'),
-                'use_pure': True
-            }
-        
-        self.connection = None
-        self.connect_db()
-        self.create_tables()
-    
-    def connect_db(self):
-        """Подключение к MySQL"""
-        try:
-            self.connection = mysql.connector.connect(**self.db_config)
-            print("✓ Подключено к MySQL")
-        except Error as e:
-            print(f"✗ Ошибка подключения к MySQL: {e}")
-            print("Проверьте настройки в файле .env")
-            sys.exit(1)
-    
-    def create_tables(self):
-        """Создание необходимых таблиц"""
-        cursor = self.connection.cursor()
-        
-        # Таблица для кеша запросов
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS search_cache (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                original_query VARCHAR(255) NOT NULL,
-                normalized_query VARCHAR(255) NOT NULL,
-                query_md5 VARCHAR(32) NOT NULL UNIQUE,
-                search_params JSON,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_query_md5 (query_md5),
-                INDEX idx_created (created_at)
-            ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-        """)
-        
-        # Таблица для скачанных файлов
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS downloaded_files (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                query_md5 VARCHAR(32) NOT NULL,
-                file_path VARCHAR(500) NOT NULL,
-                file_name VARCHAR(255),
-                file_size INT,
-                file_type VARCHAR(20),
-                downloaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_query_md5 (query_md5),
-                INDEX idx_file_path (file_path),
-                CONSTRAINT unique_file_per_query UNIQUE KEY unique_file (query_md5, file_path)
-            ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-        """)
-        
-        self.connection.commit()
-        print("✓ Таблицы созданы/проверены")
-    
-    def normalize_query(self, query):
-        """
-        Нормализация запроса:
-        - Приводим к нижнему регистру
-        - Удаляем знаки препинания, скобки и спецсимволы
-        - Оставляем только буквы, цифры и пробелы
-        """
-        # Приводим к нижнему регистру
-        normalized = query.lower()
-        
-        # Удаляем все кроме букв, цифр и пробелов
-        normalized = re.sub(r'[^\w\s]', ' ', normalized)
-        
-        # Заменяем множественные пробелы на один
-        normalized = re.sub(r'\s+', ' ', normalized)
-        
-        # Убираем пробелы в начале и конце
-        normalized = normalized.strip()
-        
-        return normalized
-    
-    def get_query_md5(self, query):
-        """Получение MD5 хеша от нормализованного запроса"""
-        normalized = self.normalize_query(query)
-        return hashlib.md5(normalized.encode('utf-8')).hexdigest()
-    
-    def is_cached(self, query_md5):
-        """Проверка, есть ли запрос в кеше"""
-        cursor = self.connection.cursor(dictionary=True)
-        
-        cursor.execute("""
-            SELECT * FROM search_cache 
-            WHERE query_md5 = %s
-        """, (query_md5,))
-        
-        return cursor.fetchone() is not None
-    
-    def get_cached_files(self, query_md5):
-        """Получение списка файлов из кеша для запроса"""
-        cursor = self.connection.cursor(dictionary=True)
-        
-        cursor.execute("""
-            SELECT * FROM downloaded_files 
-            WHERE query_md5 = %s
-            ORDER BY downloaded_at DESC
-        """, (query_md5,))
-        
-        return cursor.fetchall()
-    
-    def save_to_cache(self, query_md5, original_query, normalized_query, params):
-        """Сохранение информации о запросе в кеш"""
-        cursor = self.connection.cursor()
-        
-        cursor.execute("""
-            INSERT INTO search_cache (original_query, normalized_query, query_md5, search_params)
-            VALUES (%s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE
-            search_params = VALUES(search_params)
-        """, (original_query, normalized_query, query_md5, json.dumps(params, ensure_ascii=False)))
-        
-        self.connection.commit()
-    
-    def save_downloaded_file(self, query_md5, file_path, file_type='image'):
-        """Сохранение информации о скачанном файле"""
-        try:
-            # Получаем размер файла
-            file_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
-            file_name = os.path.basename(file_path)
-            
-            cursor = self.connection.cursor()
-            
-            cursor.execute("""
-                INSERT INTO downloaded_files (query_md5, file_path, file_name, file_size, file_type)
-                VALUES (%s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                file_size = VALUES(file_size),
-                downloaded_at = CURRENT_TIMESTAMP
-            """, (query_md5, file_path, file_name, file_size, file_type))
-            
-            self.connection.commit()
-            return True
-        except Exception as e:
-            print(f"✗ Ошибка при сохранении в БД: {e}")
-            return False
-    
-    def scan_download_directory(self, directory, query_md5):
-        """Сканирование директории на наличие скачанных файлов"""
-        downloaded_files = []
-        
-        if os.path.exists(directory):
-            for root, dirs, files in os.walk(directory):
-                for file in files:
-                    # Проверяем расширения файлов
-                    if file.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.mp4', '.webm', '.mov')):
-                        file_path = os.path.join(root, file)
-                        file_type = 'video' if file.lower().endswith(('.mp4', '.webm', '.mov')) else 'image'
-                        downloaded_files.append({
-                            'path': file_path,
-                            'type': file_type
-                        })
-        
-        return downloaded_files
-    
-    def execute_pinterest_dl(self, query, output_dir, video_only=False):
-        """
-        Выполнение команды pinterest-dl
-        """
-        # Формируем команду
-        cmd = ['pinterest-dl', 'search', f'"{query}"', '-o', output_dir]
-        if video_only:
-            cmd.append('--video')
-        
-        cmd_str = ' '.join(cmd)
-        print(f"▶ Выполняю: {cmd_str}")
-        
-        try:
-            # Выполняем команду
-            result = subprocess.run(
-                cmd_str,
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=300  # 5 минут максимум
-            )
-            
-            if result.returncode == 0:
-                print("✓ Команда выполнена успешно")
-                print(result.stdout)
-                return True, result.stdout
-            else:
-                print(f"✗ Ошибка выполнения команды (код {result.returncode})")
-                print(result.stderr)
-                return False, result.stderr
-                
-        except subprocess.TimeoutExpired:
-            print("✗ Превышено время выполнения команды")
-            return False, "Timeout"
-        except Exception as e:
-            print(f"✗ Ошибка при выполнении команды: {e}")
-            return False, str(e)
-    
-    def process_search(self, query, output_dir='downloads', video_only=False, force=False):
-        """
-        Обработка поискового запроса
-        """
-        # Получаем MD5 от нормализованного запроса
-        normalized = self.normalize_query(query)
-        query_md5 = self.get_query_md5(query)
-        
-        print(f"\n🔍 Запрос: '{query}'")
-        print(f"📝 Нормализованный: '{normalized}'")
-        print(f"🔑 MD5: {query_md5}")
-        print(f"📁 Директория: {output_dir}")
-        print("-" * 60)
-        
-        # Проверяем кеш
-        if not force and self.is_cached(query_md5):
-            print("📦 Запрос найден в кеше!")
-            
-            # Получаем список файлов из кеша
-            cached_files = self.get_cached_files(query_md5)
-            
-            if cached_files:
-                print(f"\n📊 Найдено {len(cached_files)} файлов в кеше:")
-                for i, file in enumerate(cached_files, 1):
-                    size_kb = file['file_size'] / 1024 if file['file_size'] else 0
-                    print(f"  {i}. {file['file_name']} ({size_kb:.1f} KB) - {file['file_type']}")
-                
-                print("\n✓ Использованы данные из кеша")
-                return cached_files
-            else:
-                print("⚠️ В кеше нет файлов для этого запроса")
-        else:
-            if force:
-                print("⚠️ Принудительное обновление кеша")
-        
-        # Выполняем pinterest-dl
-        print("\n🚀 Запускаем pinterest-dl...")
-        success, output = self.execute_pinterest_dl(query, output_dir, video_only)
-        
-        if not success:
-            print("✗ Не удалось выполнить pinterest-dl")
+        if not self.enabled:
             return None
         
-        # Даем время на завершение загрузки файлов
-        print("\n⏳ Ожидаем завершения загрузки файлов...")
-        time.sleep(3)
-        
-        # Сканируем директорию на наличие новых файлов
-        print("🔍 Сканируем директорию загрузки...")
-        downloaded_files = self.scan_download_directory(output_dir, query_md5)
-        
-        if downloaded_files:
-            print(f"\n📥 Найдено {len(downloaded_files)} скачанных файлов:")
+        try:
+            # Check if original image exists
+            if not image_path.exists():
+                logger.error(f"Original image not found: {image_path}")
+                return None
             
-            # Сохраняем информацию о файлах в кеш
-            saved_count = 0
-            for file_info in downloaded_files:
-                if self.save_downloaded_file(query_md5, file_info['path'], file_info['type']):
-                    saved_count += 1
-                print(f"  • {os.path.basename(file_info['path'])} ({file_info['type']})")
+            # Generate preview filename
+            preview_filename = f"{image_path.stem}.jpg"
+            preview_dir = image_path.parent / Config.PREVIEW_SUBDIR
+            preview_dir.mkdir(exist_ok=True)
             
-            print(f"\n✓ Сохранено {saved_count} файлов в кеш")
+            preview_path = preview_dir / preview_filename
             
-            # Сохраняем информацию о запросе
-            params = {
-                'original_query': query,
-                'video_only': video_only,
-                'output_dir': output_dir,
-                'timestamp': datetime.now().isoformat()
-            }
-            self.save_to_cache(query_md5, query, normalized, params)
+            # If preview already exists, return it
+            if preview_path.exists():
+                logger.debug(f"Preview already exists: {preview_path}")
+                return str(preview_path)
             
-            return downloaded_files
-        else:
-            print("⚠️ Файлы не найдены в директории загрузки")
-            return []
-
-def create_env_file():
-    """Создание примера .env файла"""
-    env_content = """# Pinterest Downloader Wrapper Configuration
-# MySQL Database Settings
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=pinterest_cache
-DB_USER=root
-DB_PASSWORD=your_password_here
-DB_CHARSET=utf8mb4
-"""
-    
-    env_path = pathlib.Path('.env')
-    if not env_path.exists():
-        with open(env_path, 'w', encoding='utf-8') as f:
-            f.write(env_content)
-        print("✓ Создан файл .env. Отредактируйте его и укажите настройки MySQL")
-    else:
-        print("✓ Файл .env уже существует")
-
-def check_pinterest_dl():
-    """Проверка наличия pinterest-dl"""
-    try:
-        result = subprocess.run(['pinterest-dl', '--help'], 
-                              capture_output=True, 
-                              text=True)
-        if result.returncode == 0:
-            print("✓ pinterest-dl найден")
-            return True
-        else:
-            print("✗ pinterest-dl не найден")
-            return False
-    except FileNotFoundError:
-        print("✗ pinterest-dl не установлен")
-        return False
-
-def main():
-    parser = argparse.ArgumentParser(description='Обертка для pinterest-dl с кешированием в MySQL')
-    subparsers = parser.add_subparsers(dest='command', help='Команды')
-    
-    # Команда search
-    search_parser = subparsers.add_parser('search', help='Поиск и скачивание контента')
-    search_parser.add_argument('query', help='Поисковый запрос')
-    search_parser.add_argument('-o', '--output', default='downloads', help='Директория для скачивания')
-    search_parser.add_argument('--video', action='store_true', help='Скачивать только видео')
-    search_parser.add_argument('--force', action='store_true', help='Игнорировать кеш и скачать заново')
-    
-    # Команда для создания .env
-    env_parser = subparsers.add_parser('init', help='Создать файл .env')
-    
-    # Команда для просмотра кеша
-    cache_parser = subparsers.add_parser('show-cache', help='Показать содержимое кеша')
-    cache_parser.add_argument('query', nargs='?', help='Показать кеш для конкретного запроса')
-    
-    # Команда для очистки кеша
-    clear_parser = subparsers.add_parser('clear-cache', help='Очистить кеш')
-    clear_parser.add_argument('--all', action='store_true', help='Очистить весь кеш')
-    clear_parser.add_argument('--query', help='Очистить кеш для конкретного запроса')
-    
-    args = parser.parse_args()
-    
-    if args.command == 'init':
-        create_env_file()
-        print("\n📝 Инструкция:")
-        print("1. Отредактируйте файл .env и укажите настройки MySQL")
-        print("2. Создайте базу данных в MySQL: CREATE DATABASE pinterest_cache;")
-        print("3. Убедитесь что pinterest-dl установлен: pip install pinterest-dl")
-        print("4. Запустите поиск: python pinterest-dl-wrapper.py search 'котики' -o downloads")
-        return
-    
-    if not args.command:
-        parser.print_help()
-        return
-    
-    # Проверяем наличие pinterest-dl
-    if not check_pinterest_dl():
-        print("\n❌ Установите pinterest-dl:")
-        print("pip install pinterest-dl")
-        return
-    
-    # Проверяем наличие .env файла
-    if not os.path.exists('.env'):
-        print("⚠️  Файл .env не найден. Создайте его с помощью команды:")
-        print("   python pinterest-dl-wrapper.py init")
-        return
-    
-    # Создаем обертку
-    wrapper = PinterestDLWrapper()
-    
-    if args.command == 'show-cache':
-        cursor = wrapper.connection.cursor(dictionary=True)
-        
-        if args.query:
-            # Показываем кеш для конкретного запроса
-            query_md5 = wrapper.get_query_md5(args.query)
-            cursor.execute("""
-                SELECT sc.*, COUNT(df.id) as files_count 
-                FROM search_cache sc
-                LEFT JOIN downloaded_files df ON sc.query_md5 = df.query_md5
-                WHERE sc.query_md5 = %s
-                GROUP BY sc.id
-            """, (query_md5,))
-            cache_entry = cursor.fetchone()
-            
-            if cache_entry:
-                print(f"\n📦 Кеш для запроса: {cache_entry['original_query']}")
-                print(f"📝 Нормализованный: {cache_entry['normalized_query']}")
-                print(f"🔑 MD5: {cache_entry['query_md5']}")
-                print(f"📅 Создан: {cache_entry['created_at']}")
-                print(f"📊 Файлов в кеше: {cache_entry['files_count']}")
+            # Open and resize image
+            with Image.open(image_path) as img:
+                # Convert to RGB if necessary (for PNG with alpha)
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                    if img.mode == 'P':
+                        img = img.convert('RGBA')
+                    rgb_img.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                    img = rgb_img
+                elif img.mode != 'RGB':
+                    img = img.convert('RGB')
                 
-                # Показываем файлы
-                cursor.execute("""
-                    SELECT * FROM downloaded_files 
-                    WHERE query_md5 = %s
-                    ORDER BY downloaded_at DESC
-                """, (query_md5,))
-                files = cursor.fetchall()
+                # Calculate new size maintaining aspect ratio
+                original_width, original_height = img.size
+                new_width, new_height = self._calculate_size(
+                    original_width, original_height
+                )
                 
-                if files:
-                    print("\n📁 Скачанные файлы:")
-                    for i, f in enumerate(files, 1):
-                        size_mb = f['file_size'] / (1024*1024) if f['file_size'] else 0
-                        print(f"  {i}. {f['file_name']} ({size_mb:.2f} MB) - {f['downloaded_at']}")
-            else:
-                print(f"⚠️ Запрос '{args.query}' не найден в кеше")
-        else:
-            # Показываем все записи в кеше
-            cursor.execute("""
-                SELECT sc.*, COUNT(df.id) as files_count 
-                FROM search_cache sc
-                LEFT JOIN downloaded_files df ON sc.query_md5 = df.query_md5
-                GROUP BY sc.id
-                ORDER BY sc.created_at DESC
-            """)
-            cache_entries = cursor.fetchall()
-            
-            if cache_entries:
-                print(f"\n📦 Всего записей в кеше: {len(cache_entries)}")
-                for entry in cache_entries:
-                    print(f"\n🔹 {entry['original_query']}")
-                    print(f"   MD5: {entry['query_md5']}")
-                    print(f"   Файлов: {entry['files_count']}")
-                    print(f"   Дата: {entry['created_at']}")
-            else:
-                print("📭 Кеш пуст")
-        
-        return
+                # Resize image
+                if new_width < original_width or new_height < original_height:
+                    img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                
+                # Save preview
+                img.save(
+                    preview_path,
+                    'JPEG',
+                    quality=self.quality,
+                    optimize=True
+                )
+                
+                logger.info(f"Generated preview: {preview_path} ({new_width}x{new_height})")
+                return str(preview_path)
+                
+        except Exception as e:
+            logger.error(f"Error generating preview for {image_path}: {e}")
+            return None
     
-    if args.command == 'clear-cache':
-        cursor = wrapper.connection.cursor()
+    def _calculate_size(self, width: int, height: int) -> Tuple[int, int]:
+        """Calculate new dimensions maintaining aspect ratio."""
+        if width <= self.max_width and height <= self.max_height:
+            return width, height
         
-        if args.all:
-            cursor.execute("DELETE FROM downloaded_files")
-            cursor.execute("DELETE FROM search_cache")
-            wrapper.connection.commit()
-            print("✓ Весь кеш очищен")
-        elif args.query:
-            query_md5 = wrapper.get_query_md5(args.query)
-            cursor.execute("DELETE FROM downloaded_files WHERE query_md5 = %s", (query_md5,))
-            cursor.execute("DELETE FROM search_cache WHERE query_md5 = %s", (query_md5,))
-            wrapper.connection.commit()
-            print(f"✓ Кеш для запроса '{args.query}' очищен")
-        else:
-            print("⚠️ Укажите --all для очистки всего кеша или --query для конкретного запроса")
+        ratio = min(self.max_width / width, self.max_height / height)
+        new_width = int(width * ratio)
+        new_height = int(height * ratio)
         
-        return
-    
-    if args.command == 'search':
-        # Обрабатываем поиск
-        wrapper.process_search(
-            query=args.query,
-            output_dir=args.output,
-            video_only=args.video,
-            force=args.force
-        )
-
-if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\n\n⚠️  Прервано пользователем")
-        sys.exit(0)
-    except Exception as e:
-        print(f"\n❌ Ошибка: {e}")
-        sys.exit(1)
+        return new_width, new_height
 
 
 # ============================================================
@@ -3244,49 +2307,5 @@ mysql-connector-python>=8.0.0
 python-dotenv>=1.0.0
 pinterest-dl>=1.0.0
 Pillow>=10.0.0
-
-
-# ============================================================
-# FILE: .\graber\examples\response_headers.txt
-# TYPE: .TXT
-# ============================================================
-
-x-xss-protection: 1; mode=block
-x-content-type-options: nosniff
-Vary: User-Agent, Accept-Encoding
-x-ua-compatible: IE=edge
-reporting-endpoints: coop-endpoint="https://www.pinterest.com/_/_/coop_report/", coep-endpoint="https://www.pinterest.com/_/_/coep_report/"
-cross-origin-opener-policy-report-only: same-origin; report-to="coop-endpoint"
-Content-Security-Policy: default-src 'self' blob: s.pinimg.com s1.pinimg.com s2.pinimg.com; font-src 'self' m.media-amazon.com *.amazon-adsystem.com s.pinimg.com s1.pinimg.com s2.pinimg.com data: fonts.googleapis.com fonts.gstatic.com use.typekit.net; style-src 'self' blob: 'unsafe-inline' data: *.pinimg.com *.pinterest.com accounts.google.com fonts.googleapis.com *.adyen.com *.adyenpayments.com; img-src blob: data: *; base-uri 'none'; connect-src 'self' blob: m.media-amazon.com *.amazon-adsystem.com htlb.casalemedia.com *.2mdn.net *.ada.support *.pinimg.com *.pinterest.com accounts.google.com *.adyen.com pinterest-salvador.s3.amazonaws.com *.adyenpayments.com *.facebook.com *.doubleclick.net *.adtrafficquality.google www.recaptcha.net https://pinterest-api.arkoselabs.com/ www.googleapis.com *.dropboxapi.com pinterest-aberdeen.s3.amazonaws.com pinterest-aberdeen.s3.us-east-1.amazonaws.com pinterest-anaheim.s3.amazonaws.com pinterest-anaheim.s3.us-east-1.amazonaws.com pinterest-hilo.s3.amazonaws.com pinterest-hilo.s3.us-east-1.amazonaws.com pinterest-sim-toontown.s3.amazonaws.com pinterest-sim-toontown.s3.us-east-1.amazonaws.com pinterest-media-upload.s3.amazonaws.com pinterest-media-upload.s3.us-east-1.amazonaws.com pinterest-media-upload.s3-accelerate.amazonaws.com pinterest-media-upload.s3-accelerate.us-east-1.amazonaws.com pinterest-milwaukee.s3.amazonaws.com pinterest-milwaukee.s3.us-east-1.amazonaws.com pinterest-poughkeepsie.s3.amazonaws.com pinterest-poughkeepsie.s3.us-east-1.amazonaws.com pinterest-waterloo.s3.amazonaws.com pinterest-waterloo.s3.us-east-1.amazonaws.com pinterest-plymouth.s3.amazonaws.com pinterest-plymouth.s3.us-east-1.amazonaws.com pinterest-salvador.s3.us-east-1.amazonaws.com pinterest-yamagata.s3.amazonaws.com pinterest-yamagata.s3.us-east-1.amazonaws.com *.cedexis.com *.cedexis-radar.net *.tvpixel.com api.pinadmin.com *.live-video.net https://*.daily.co https://*.pluot.blue wss://*.wss.daily.co api.basistheory.com; form-action 'self' *.adyen.com *.klarna.com *.tink.com *.adyenpayments.com; frame-src 'self' *.ada.support *.pinimg.com *.pinterest.com *.adyen.com static-sandbox.dlocal.com static.dlocal.com *.google.com *.facebook.com *.doubleclick.net *.adtrafficquality.google *.safeframe.googlesyndication.com www.recaptcha.net https://iframe.arkoselabs.com/ https://pinterest-api.arkoselabs.com/ api.sardine.ai api.sandbox.sardine.ai pinterest-hilo.s3.amazonaws.com pinterest-hilo.s3.us-east-1.amazonaws.com pinterest-sim-toontown.s3.amazonaws.com pinterest-sim-toontown.s3.us-east-1.amazonaws.com pinterest-milwaukee.s3.amazonaws.com pinterest-milwaukee.s3.us-east-1.amazonaws.com pinterest-waterloo.s3.amazonaws.com pinterest-waterloo.s3.us-east-1.amazonaws.com pinterest-tolu.s3.amazonaws.com *.pinterdev.com content.googleapis.com *.youtube.com *.youtube-nocookie.com *.ytimg.com player.vimeo.com calendly.com vine.co bid.g.doubleclick.net *.fls.doubleclick.net pinlogs.s3.amazonaws.com pinlogs.s3.us-east-1.amazonaws.com advertising-delivery-metric-reports.s3.amazonaws.com advertising-delivery-metric-reports.s3.us-east-1.amazonaws.com servedby.flashtalking.com pinterest-uk.admo.tv pinterest-uk-web.admo.tv fbrpc://call *.linkedin.com px.ads.linkedin.com api.basistheory.com js.basistheory.com 3ds.basistheory.com; media-src 'self' blob: m.media-amazon.com *.2mdn.net data: *.pinimg.com *.live-video.net; object-src 'self'; script-src 'nonce-a60c1e089f19f115198cd2f1847e8959' 'strict-dynamic' 'self' blob: 'unsafe-inline' *.pinimg.com *.pinterest.com *.adyen.com js.dlocal.com js-sandbox.dlocal.com static-sandbox.dlocal.com static.dlocal.com *.adyenpayments.com 'report-sample' *.google.com connect.facebook.net *.google-analytics.com *.facebook.com *.googleadservices.com *.doubleclick.net *.adtrafficquality.google *.googletagmanager.com radar.cedexis.com *.cedexis-test.com www.gstatic.com/recaptcha/ www.gstatic.cn/recaptcha/ www.recaptcha.net https://pinterest-api.arkoselabs.com/ api.sardine.ai api.sandbox.sardine.ai 'wasm-unsafe-eval' js.basistheory.com 3ds.basistheory.com; worker-src 'self' blob: 'unsafe-inline'; report-uri /_/_/csp_report/?rid=1434290511213357; frame-ancestors 'self' , script-src 'self' blob: 'unsafe-inline' *.pinimg.com *.pinterest.com *.adyen.com js.dlocal.com js-sandbox.dlocal.com static-sandbox.dlocal.com static.dlocal.com *.adyenpayments.com 'report-sample' *.google.com connect.facebook.net *.google-analytics.com *.facebook.com *.googleadservices.com *.doubleclick.net *.adtrafficquality.google *.googletagmanager.com radar.cedexis.com *.cedexis-test.com www.gstatic.com/recaptcha/ www.gstatic.cn/recaptcha/ www.recaptcha.net https://pinterest-api.arkoselabs.com/ api.sardine.ai api.sandbox.sardine.ai 'wasm-unsafe-eval' js.basistheory.com 3ds.basistheory.com; report-uri /_/_/csp_report/?rid=1434290511213357
-x-frame-options: SAMEORIGIN
-origin-trial: AvlUIFJouPpJAKljRGh7EnYm2Brnx/eu51h39Z7p11vbzNlw2YhkUhxvxZdkS709VlGGNw4Gcg/a9mAzHDrEcQ0AAAB5eyJvcmlnaW4iOiJodHRwczovL3BpbnRlcmVzdC5jb206NDQzIiwiZmVhdHVyZSI6IlNlbmRGdWxsVXNlckFnZW50QWZ0ZXJSZWR1Y3Rpb24iLCJleHBpcnkiOjE2ODQ4ODYzOTksImlzU3ViZG9tYWluIjp0cnVlfQ==
-Accept-CH: Sec-CH-UA-Full,Sec-CH-UA-Full-Version-List,Sec-CH-UA-Model,Sec-CH-UA-Platform-Version
-Content-Type: text/html; charset=utf-8
-Link: <https://i.pinimg.com>; rel=preconnect; crossorigin=anonymous, <https://s.pinimg.com>; rel=preconnect; crossorigin=anonymous, <https://v1.pinimg.com>; rel=preconnect; crossorigin=anonymous
-x-robots-tag: noindex
-Trailer: x-pinterest-sli-streamed-response-type
-x-envoy-upstream-service-time: 85
-pinterest-generated-by: coreapp-webapp-prod-0a03aca9
-Content-Encoding: br
-pinterest-version: 466b2af
-referrer-policy: origin
-x-pinterest-rid: 1434290511213357
-x-pinterest-rid-128bit: f22baa4a22a788bec70c3c351fdb22a6
-Date: Sun, 01 Mar 2026 04:16:15 GMT
-Transfer-Encoding: chunked
-Connection: keep-alive, Transfer-Encoding
-AKAMAI-GRN: 0.360c4017.1772338575.3236ca57
-X-CDN: akamai
-Strict-Transport-Security: max-age=31536000 ; includeSubDomains ; preload
-
-
-
-# ============================================================
-# FILE: .\graber\requirements.txt
-# TYPE: .TXT
-# ============================================================
-
-mysql-connector-python>=8.0.0
-python-dotenv>=1.0.0
 
 

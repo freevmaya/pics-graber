@@ -7,7 +7,7 @@ def combine_project_files():
     
     output_file = "combined.txt"
     exclude_files = ["combine_run.py", output_file]
-    exclude_paths = ["vendor", "dev", "env"]
+    exclude_paths = ["vendor", "dev", "env", "graber"]
     
     # Определяем расширения файлов для обработки
     target_extensions = [".py", ".txt"]
