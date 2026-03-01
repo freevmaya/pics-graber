@@ -1,29 +1,25 @@
-# ============================================================
-# FILE: locales/en.json
-# TYPE: .JSON
-# ============================================================
-
 {
     "language_name": "English",
     
-    "welcome": "👋 *Welcome, {name}!*\n\nI can help you find and download images from Pinterest.\n\n📝 *How to use:*\n• Send me any search query (e.g., 'cats', 'beautiful landscapes')\n• I'll show you {batch_size} images at a time\n• Use the buttons to see more or start a new search\n\n🔍 *Try it now:* Send me a search term!",
+    "welcome": "👋 <b>Welcome, {name}!</b>\n\nI can help you find and download images from Pinterest.\n\n📝 <b>How to use:</b>\n• Send me any search query (e.g., 'cats', 'beautiful landscapes')\n• I'll show you {batch_size} images at a time\n• Use the buttons to see more or start a new search\n\n🔍 <b>Try it now:</b> Send me a search term!",
     
-    "help": "🤖 *Pinterest Image Bot Help*\n\n*Commands:*\n/start - Start the bot\n/help - Show this help\n/new - Start a new search\n/stop - Stop current search\n/language - Change language\n\n*How to search:*\nSimply type what you want to find!\nExamples: 'sunset beach', 'cute puppies', 'modern architecture'\n\n*Features:*\n• Shows {batch_size} images per batch\n• Caches results for faster access\n• Continue or stop anytime",
+    "help": "🤖 <b>Pinterest Image Bot Help</b>\n\n<b>Commands:</b>\n/start - Start the bot\n/help - Show this help\n/new - Start a new search\n/stop - Stop current search\n/language - Change language\n\n<b>How to search:</b>\nSimply type what you want to find!\nExamples: 'sunset beach', 'cute puppies', 'modern architecture'\n\n<b>Features:</b>\n• Shows {batch_size} images per batch\n• Caches results for faster access\n• Continue or stop anytime",
     
-    "language_prompt": "🌐 *Select your language:*\nChoose your preferred language:",
-    "language_changed": "✅ *Language changed to {language}!*",
+    "language_prompt": "🌐 <b>Select your language:</b>\nChoose your preferred language:",
+    "language_changed": "✅ <b>Language changed to {language}!</b>",
     "language_unsupported": "❌ Language not supported. Defaulting to English.",
     
-    "searching": "🔍 *Searching for:* {query}\n⏳ Please wait...",
-    "downloading": "🔍 *Searching for:* {query}\n📥 Downloading images...",
-    "no_images_found": "❌ *No images found*\nPlease try a different search term.",
-    "no_images_available": "❌ *No images available*\nPlease try again later.",
-    "no_more_images": "✨ *No more images*\nUse /new to start another search!",
-    "session_expired": "⚠️ *Session expired*\nPlease start a new search.",
+    "searching": "🔍 <b>Searching for:</b> {query}\n⏳ Please wait...",
+    "downloading": "🔍 <b>Searching for:</b> {query}\n📥 Downloading images...",
+    "no_images_found": "❌ <b>No images found</b>\nPlease try a different search term.",
+    "no_images_available": "❌ <b>No images available</b>\nPlease try again later.",
+    "no_more_images": "✨ <b>No more images</b>\nUse /new to start another search!",
+    "session_expired": "⚠️ <b>Session expired</b>\nPlease start a new search.",
     
-    "batch_info": "📸 *Batch {current} of {total}*\nShowing {count} images",
+    "batch_info": "📸 <b>Batch {current} of {total}</b>\nShowing {count} images",
     "progress": "📊 Progress: {current}/{total}",
-    "what_next": "*What would you like to do?*",
+    "what_next": "<b>What would you like to do?</b>",
+    "more_available": "📌 {count} more available",
     
     "next": "▶️ Next {count}",
     "stop": "⏹️ Stop",
@@ -32,12 +28,18 @@
     "confirm": "✅ Confirm",
     "cancel": "❌ Cancel",
     
-    "search_stopped": "⏹️ *Search stopped*\nUse /new to start another search!",
-    "ready_for_search": "🆕 *Ready for new search*\nSend me what you'd like to find!",
-    "error_occurred": "❌ *An error occurred*\nPlease try again later.",
+    "search_stopped": "⏹️ <b>Search stopped</b>\nUse /new to start another search!",
+    "ready_for_search": "🆕 <b>Ready for new search</b>\nSend me what you'd like to find!",
+    "error_occurred": "❌ <b>An error occurred</b>\nPlease try again later.",
     "file_not_found": "⚠️ Image file not found: {filename}",
     "failed_to_send": "⚠️ Failed to send image: {filename}",
     "empty_query": "Please send a non-empty search query.",
+    
+    "video_found": "🎥 Found {count} videos",
+    "image_found": "🖼️ Found {count} images",
+    "video_info": "📹 {resolution} • {duration}",
+    "file_size": "💾 {size}",
+    "large_file": "⚠️ File too large, sending as document",
     
     "lang_en": "English",
     "lang_ru": "Russian",

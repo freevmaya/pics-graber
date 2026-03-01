@@ -4,11 +4,2163 @@
 Придерживаться изначальных именований классов, методов, функций, констант, переменных и не переименовывать при модификации.
 Если требуется создать отдельный класс и код его больше 100 строк, создавай его в отдельном файле
 Константы должны быть написаны в ВЕРХНЕМ РЕГИСТРЕ
-Важно: При модификации показывай весь код изменяемого файла!
+Важно: 
+При модификации показывай весь код изменяемого файла!
+Показывай полный код в файле, если изменения более 50 строк!
+Если добавляются тексты в локализации, то показывать все измененые json файлы!
+
 
 # COMBINED PROJECT FILES FOR DEEPSEEK
 # Encoding: UTF-8
 # Processed extensions: .py, .txt
+
+# ============================================================
+# FILE: .\bot\bot_sync.py
+# TYPE: .PY
+# ============================================================
+
+# ============================================================
+# FILE: bot_sync.py (FIXED)
+# TYPE: .PY
+# ============================================================
+
+"""Main Telegram bot module."""
+
+import logging
+from typing import Optional, Dict, List
+from pathlib import Path
+import asyncio
+from datetime import datetime
+
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    filters,
+    ContextTypes
+)
+from telegram.constants import ParseMode
+
+from config import Config
+from database import DatabaseManager
+from pinterest_downloader import PinterestDownloader
+
+# Setup logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+class PinterestBot:
+    """Main bot class."""
+    
+    # Constants
+    CALLBACK_NEXT = "next"
+    CALLBACK_STOP = "stop"
+    CALLBACK_NEW_SEARCH = "new_search"
+    
+    def __init__(self):
+        """Initialize bot components."""
+        self.config = Config()
+        self.db = DatabaseManager()
+        self.downloader = PinterestDownloader()
+        self.batch_size = Config.IMAGES_PER_BATCH
+        self.application = None
+        
+        # Check pinterest-dl
+        if not PinterestDownloader.check_pinterest_dl():
+            logger.warning("pinterest-dl not found. Please install it: pip install pinterest-dl")
+    
+    async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /start command."""
+        user = update.effective_user
+        self.db.register_user(
+            user_id=user.id,
+            username=user.username,
+            first_name=user.first_name,
+            last_name=user.last_name
+        )
+        
+        welcome_text = (
+            f"👋 *Welcome, {user.first_name}!*\n\n"
+            "I can help you find and download images from Pinterest.\n\n"
+            "📝 *How to use:*\n"
+            "• Send me any search query (e.g., 'cats', 'beautiful landscapes')\n"
+            f"• I'll show you {self.batch_size} images at a time\n"
+            "• Use the buttons to see more or start a new search\n\n"
+            "🔍 *Try it now:* Send me a search term!"
+        )
+        
+        await update.message.reply_text(
+            welcome_text,
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /help command."""
+        help_text = (
+            "🤖 *Pinterest Image Bot Help*\n\n"
+            "*Commands:*\n"
+            "/start - Start the bot\n"
+            "/help - Show this help\n"
+            "/new - Start a new search\n"
+            "/stop - Stop current search\n\n"
+            "*How to search:*\n"
+            "Simply type what you want to find!\n"
+            "Examples: 'sunset beach', 'cute puppies', 'modern architecture'\n\n"
+            "*Features:*\n"
+            f"• Shows {self.batch_size} images per batch\n"
+            "• Caches results for faster access\n"
+            "• Download buttons for each image\n"
+            "• Continue or stop anytime"
+        )
+        
+        await update.message.reply_text(
+            help_text,
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    async def new_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /new command - reset search."""
+        user_id = update.effective_user.id
+        self.db.reset_user_session(user_id)
+        
+        await update.message.reply_text(
+            "🆕 *Starting new search*\n"
+            "Send me what you'd like to find!",
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    async def stop_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /stop command."""
+        user_id = update.effective_user.id
+        self.db.reset_user_session(user_id)
+        
+        await update.message.reply_text(
+            "⏹️ *Search stopped*\n"
+            "Send a new query to start again!",
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle user messages (search queries)."""
+        user = update.effective_user
+        query = update.message.text.strip()
+        
+        if not query:
+            await update.message.reply_text("Please send a non-empty search query.")
+            return
+        
+        # Register/update user
+        self.db.register_user(
+            user_id=user.id,
+            username=user.username,
+            first_name=user.first_name,
+            last_name=user.last_name
+        )
+        
+        # Send initial status
+        status_msg = await update.message.reply_text(
+            f"🔍 *Searching for:* {query}\n"
+            "⏳ Please wait...",
+            parse_mode=ParseMode.MARKDOWN
+        )
+        
+        # Check cache
+        cached_search = self.db.get_cached_search(user.id, query)
+        search_cache_id = None
+        images = []
+        
+        if cached_search:
+            search_cache_id = cached_search['id']
+            logger.info(f"Found cached search for user {user.id}: {query}")
+            
+            # Get unsent images from cache
+            images = self.db.get_unsent_images(
+                search_cache_id,
+                self.batch_size,
+                0
+            )
+        
+        # If no cache or no images, download new ones
+        if not images:
+            await status_msg.edit_text(
+                f"🔍 *Searching for:* {query}\n"
+                "📥 Downloading images...",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            
+            # Download images
+            downloaded = self.downloader.download_images(
+                query,
+                Config.MAX_IMAGES_PER_REQUEST
+            )
+            
+            if not downloaded:
+                await status_msg.edit_text(
+                    "❌ *No images found*\n"
+                    "Please try a different search term.",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+                return
+            
+            # Save to cache
+            if not cached_search:
+                normalized = self.db.normalize_query(query)
+                query_md5 = self.db.get_query_md5(query)
+                search_cache_id = self.db.create_search_cache(
+                    user.id, query, normalized, query_md5
+                )
+            
+            if search_cache_id:
+                saved = self.db.save_images_to_cache(search_cache_id, downloaded)
+                logger.info(f"Saved {saved} images to cache for search {search_cache_id}")
+                
+                # Get first batch
+                images = self.db.get_unsent_images(search_cache_id, self.batch_size, 0)
+        
+        if not images:
+            await status_msg.edit_text(
+                "❌ *No images available*\n"
+                "Please try again later.",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            return
+        
+        # Get total images count
+        session = self.db.get_user_session(user.id)
+        total_images = session['total_images'] if session else len(images)
+        
+        # Update user session
+        self.db.update_user_session(
+            user_id=user.id,
+            search_cache_id=search_cache_id,
+            offset=len(images),
+            total_images=total_images,
+            last_query=query,
+            last_message_id=status_msg.message_id
+        )
+        
+        # Delete status message
+        await status_msg.delete()
+        
+        # Send images
+        await self.send_image_batch(
+            update, context,
+            images,
+            current_batch=1,
+            total_batches=(total_images + self.batch_size - 1) // self.batch_size,
+            search_cache_id=search_cache_id
+        )
+    
+    async def send_image_batch(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
+                               images: List[Dict], current_batch: int, total_batches: int,
+                               search_cache_id: int):
+        """Send a batch of images to user."""
+        user_id = update.effective_user.id
+        
+        if not images:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text="✨ *No more images*\n"
+                     "Use /new to start another search!",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            return
+        
+        # Create keyboard
+        keyboard = []
+        
+        # Add navigation buttons if there are more images
+        session = self.db.get_user_session(user_id)
+        if session and session['current_offset'] < session['total_images']:
+            keyboard.append([
+                InlineKeyboardButton(
+                    f"▶️ Next {self.batch_size}",
+                    callback_data=self.CALLBACK_NEXT
+                )
+            ])
+        
+        # Always add stop and new search buttons
+        keyboard.append([
+            InlineKeyboardButton("⏹️ Stop", callback_data=self.CALLBACK_STOP),
+            InlineKeyboardButton("🆕 New Search", callback_data=self.CALLBACK_NEW_SEARCH)
+        ])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        # Send batch info
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=(
+                f"📸 *Batch {current_batch} of {total_batches}*\n"
+                f"Showing {len(images)} images"
+            ),
+            parse_mode=ParseMode.MARKDOWN
+        )
+        
+        # Send images
+        image_ids = []
+        for img in images:
+            try:
+                # Send photo
+                if img['local_path'] and Path(img['local_path']).exists():
+                    with open(img['local_path'], 'rb') as photo:
+                        sent = await context.bot.send_photo(
+                            chat_id=user_id,
+                            photo=photo,
+                            caption=img.get('caption', '')[:200] if img.get('caption') else None
+                        )
+                        image_ids.append(img['id'])
+                else:
+                    # Fallback to URL if local file doesn't exist
+                    await context.bot.send_message(
+                        chat_id=user_id,
+                        text=f"⚠️ Image file not found: {img.get('file_name', 'unknown')}"
+                    )
+                
+                # Small delay to avoid flooding
+                await asyncio.sleep(0.5)
+                
+            except Exception as e:
+                logger.error(f"Error sending image: {e}")
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=f"⚠️ Failed to send image: {img.get('file_name', 'unknown')}"
+                )
+        
+        # Mark images as sent
+        if image_ids:
+            self.db.mark_images_as_sent(image_ids)
+        
+        # Send navigation message
+        nav_msg = (
+            f"*What would you like to do?*\n\n"
+            f"📊 Progress: {session['current_offset'] if session else len(images)}/{session['total_images'] if session else len(images)}"
+        )
+        
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=nav_msg,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=reply_markup
+        )
+    
+    async def handle_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle callback queries from inline keyboards."""
+        query = update.callback_query
+        await query.answer()
+        
+        user_id = update.effective_user.id
+        callback_data = query.data
+        
+        if callback_data == self.CALLBACK_STOP:
+            # Stop current search
+            self.db.reset_user_session(user_id)
+            await query.edit_message_text(
+                text="⏹️ *Search stopped*\n"
+                     "Use /new to start another search!",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            
+        elif callback_data == self.CALLBACK_NEW_SEARCH:
+            # Start new search
+            self.db.reset_user_session(user_id)
+            await query.edit_message_text(
+                text="🆕 *Ready for new search*\n"
+                     "Send me what you'd like to find!",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            
+        elif callback_data == self.CALLBACK_NEXT:
+            # Get next batch
+            session = self.db.get_user_session(user_id)
+            
+            if not session or not session.get('current_search_cache_id'):
+                await query.edit_message_text(
+                    text="⚠️ *Session expired*\n"
+                         "Please start a new search.",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+                return
+            
+            # Get next batch of unsent images
+            next_images = self.db.get_unsent_images(
+                session['current_search_cache_id'],
+                self.batch_size,
+                session['current_offset']
+            )
+            
+            if not next_images:
+                await query.edit_message_text(
+                    text="✨ *No more images*\n"
+                         "Use /new to start another search!",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+                return
+            
+            # Update offset
+            new_offset = session['current_offset'] + len(next_images)
+            self.db.update_user_session(
+                user_id=user_id,
+                offset=new_offset
+            )
+            
+            # Calculate batches
+            current_batch = (new_offset - len(next_images)) // self.batch_size + 1
+            total_batches = (session['total_images'] + self.batch_size - 1) // self.batch_size
+            
+            # Send next batch
+            await self.send_image_batch(
+                update, context,
+                next_images,
+                current_batch=current_batch,
+                total_batches=total_batches,
+                search_cache_id=session['current_search_cache_id']
+            )
+    
+    async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle errors."""
+        logger.error(f"Update {update} caused error {context.error}")
+        
+        try:
+            if update and update.effective_message:
+                await update.effective_message.reply_text(
+                    "❌ *An error occurred*\n"
+                    "Please try again later.",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+        except:
+            pass
+    
+    def run(self):
+        """Run the bot."""
+        # Create application
+        self.application = Application.builder().token(Config.BOT_TOKEN).build()
+        
+        # Add handlers
+        self.application.add_handler(CommandHandler("start", self.start_command))
+        self.application.add_handler(CommandHandler("help", self.help_command))
+        self.application.add_handler(CommandHandler("new", self.new_command))
+        self.application.add_handler(CommandHandler("stop", self.stop_command))
+        self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
+        self.application.add_handler(CallbackQueryHandler(self.handle_callback))
+        self.application.add_error_handler(self.error_handler)
+        
+        # Start bot
+        logger.info("Starting Pinterest Bot...")
+        print("\n" + "="*50)
+        print("🤖 Pinterest Image Bot Started")
+        print("="*50)
+        print(f"Bot Token: {Config.BOT_TOKEN[:10]}...")
+        print(f"Images per batch: {self.batch_size}")
+        print(f"Max images per request: {Config.MAX_IMAGES_PER_REQUEST}")
+        print("="*50 + "\n")
+        
+        self.application.run_polling(allowed_updates=Update.ALL_TYPES)
+    
+    def __del__(self):
+        """Cleanup on deletion."""
+        if hasattr(self, 'db'):
+            self.db.close()
+
+
+# ============================================================
+# FILE: .\bot\bot_telebot.py
+# TYPE: .PY
+# ============================================================
+
+# ============================================================
+# FILE: bot_telebot.py (COMPLETE - FIXED SESSION MANAGEMENT)
+# TYPE: .PY
+# ============================================================
+
+"""Telegram bot using pyTelegramBotAPI with video support."""
+
+import telebot
+from telebot import types
+import logging
+from typing import Optional, Dict, List
+from pathlib import Path
+import time
+from datetime import datetime
+import html
+import os
+
+from config import Config
+from database import DatabaseManager
+from pinterest_downloader import PinterestDownloader
+from localization import LocalizationManager
+
+# Setup logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+class PinterestBot:
+    """Main bot class with video support."""
+    
+    # Constants
+    CALLBACK_NEXT = "next"
+    CALLBACK_STOP = "stop"
+    CALLBACK_NEW_SEARCH = "new_search"
+    CALLBACK_LANGUAGE = "lang_"
+    CALLBACK_MORE_INFO = "more_info_"
+    
+    # File size limits (Telegram limits)
+    MAX_PHOTO_SIZE = 10 * 1024 * 1024  # 10 MB for photos
+    MAX_VIDEO_SIZE = 50 * 1024 * 1024  # 50 MB for videos
+    
+    def __init__(self):
+        """Initialize bot components."""
+        self.config = Config()
+        self.db = DatabaseManager()
+        self.downloader = PinterestDownloader()
+        self.localization = LocalizationManager()
+        self.batch_size = Config.IMAGES_PER_BATCH
+        self.bot = telebot.TeleBot(Config.BOT_TOKEN)
+        
+        # Check pinterest-dl
+        if not PinterestDownloader.check_pinterest_dl():
+            logger.warning("pinterest-dl not found. Please install it: pip install pinterest-dl")
+        
+        # Register handlers
+        self.register_handlers()
+    
+    def get_text(self, key: str, message, **kwargs) -> str:
+        """Helper to get localized text."""
+        text = self.localization.get_text(key, message, **kwargs)
+        return text
+    
+    def format_file_size(self, size_bytes: int) -> str:
+        """Format file size for display."""
+        if not size_bytes:
+            return "?"
+        if size_bytes < 1024:
+            return f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            return f"{size_bytes / 1024:.1f} KB"
+        elif size_bytes < 1024 * 1024 * 1024:
+            return f"{size_bytes / (1024 * 1024):.1f} MB"
+        else:
+            return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
+    
+    def format_duration(self, seconds: float) -> str:
+        """Format duration for display."""
+        if not seconds or seconds <= 0:
+            return "?"
+        
+        minutes = int(seconds // 60)
+        seconds = int(seconds % 60)
+        return f"{minutes}:{seconds:02d}"
+    
+    def register_handlers(self):
+        """Register message and callback handlers."""
+        
+        @self.bot.message_handler(commands=['start'])
+        def start_command(message):
+            user = message.from_user
+            self.db.register_user(
+                user_id=user.id,
+                username=user.username,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                language_code=user.language_code or 'en'
+            )
+            
+            welcome_text = self.get_text(
+                'welcome', message,
+                name=user.first_name,
+                batch_size=self.batch_size
+            )
+            
+            self.bot.reply_to(message, welcome_text, parse_mode='HTML')
+        
+        @self.bot.message_handler(commands=['help'])
+        def help_command(message):
+            help_text = self.get_text(
+                'help', message,
+                batch_size=self.batch_size
+            )
+            
+            self.bot.reply_to(message, help_text, parse_mode='HTML')
+        
+        @self.bot.message_handler(commands=['language'])
+        def language_command(message):
+            """Handle language change command."""
+            keyboard = self.localization.get_language_keyboard(message)
+            
+            self.bot.reply_to(
+                message,
+                self.get_text('language_prompt', message),
+                parse_mode='HTML',
+                reply_markup=keyboard
+            )
+        
+        @self.bot.message_handler(commands=['new'])
+        def new_command(message):
+            user_id = message.from_user.id
+            self.db.reset_user_session(user_id)
+            
+            self.bot.reply_to(
+                message,
+                self.get_text('ready_for_search', message),
+                parse_mode='HTML'
+            )
+        
+        @self.bot.message_handler(commands=['stop'])
+        def stop_command(message):
+            user_id = message.from_user.id
+            self.db.reset_user_session(user_id)
+            
+            self.bot.reply_to(
+                message,
+                self.get_text('search_stopped', message),
+                parse_mode='HTML'
+            )
+        
+        @self.bot.message_handler(func=lambda message: True)
+        def handle_message(message):
+            user = message.from_user
+            query = message.text.strip()
+            
+            if not query:
+                self.bot.reply_to(
+                    message,
+                    self.get_text('empty_query', message)
+                )
+                return
+            
+            # Register/update user
+            self.db.register_user(
+                user_id=user.id,
+                username=user.username,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                language_code=self.localization.get_user_language(message)
+            )
+            
+            # Send initial status
+            status_msg = self.bot.reply_to(
+                message,
+                self.get_text('searching', message, query=query),
+                parse_mode='HTML'
+            )
+            
+            # Process search
+            self.process_search(message, query, status_msg)
+        
+        @self.bot.callback_query_handler(func=lambda call: True)
+        def handle_callback(call):
+            user_id = call.from_user.id
+            callback_data = call.data
+            
+            if callback_data == self.CALLBACK_STOP:
+                self.db.reset_user_session(user_id)
+                self.bot.edit_message_text(
+                    chat_id=user_id,
+                    message_id=call.message.message_id,
+                    text=self.get_text('search_stopped', call.message),
+                    parse_mode='HTML'
+                )
+                
+            elif callback_data == self.CALLBACK_NEW_SEARCH:
+                self.db.reset_user_session(user_id)
+                self.bot.edit_message_text(
+                    chat_id=user_id,
+                    message_id=call.message.message_id,
+                    text=self.get_text('ready_for_search', call.message),
+                    parse_mode='HTML'
+                )
+                
+            elif callback_data == self.CALLBACK_NEXT:
+                session = self.db.get_user_session(user_id)
+                
+                if not session or not session.get('current_search_cache_id'):
+                    self.bot.edit_message_text(
+                        chat_id=user_id,
+                        message_id=call.message.message_id,
+                        text=self.get_text('session_expired', call.message),
+                        parse_mode='HTML'
+                    )
+                    return
+                
+                # Get next batch of unsent images
+                next_items = self.db.get_unsent_images(
+                    session['current_search_cache_id'],
+                    self.batch_size,
+                    session['current_offset']
+                )
+                
+                if not next_items:
+                    self.bot.edit_message_text(
+                        chat_id=user_id,
+                        message_id=call.message.message_id,
+                        text=self.get_text('no_more_images', call.message),
+                        parse_mode='HTML'
+                    )
+                    return
+                
+                # Update offset (total_images remains the same!)
+                new_offset = session['current_offset'] + len(next_items)
+                self.db.update_user_session(
+                    user_id=user_id,
+                    offset=new_offset
+                )
+                
+                # Calculate batches using original total_images
+                current_batch = (new_offset - len(next_items)) // self.batch_size + 1
+                total_batches = (session['total_images'] + self.batch_size - 1) // self.batch_size
+                
+                # Delete callback message
+                try:
+                    self.bot.delete_message(user_id, call.message.message_id)
+                except:
+                    pass
+                
+                # Send next batch
+                self.send_media_batch(
+                    user_id,
+                    next_items,
+                    current_batch,
+                    total_batches,
+                    session['current_search_cache_id'],
+                    call.message  # Pass original message for localization
+                )
+            
+            elif callback_data.startswith(self.CALLBACK_LANGUAGE):
+                # Handle language selection
+                lang_code = callback_data.replace(self.CALLBACK_LANGUAGE, '')
+                
+                if self.localization.set_user_language(user_id, lang_code):
+                    # Update user's language in database
+                    self.db.update_user_language(user_id, lang_code)
+                    
+                    # Get language name in the selected language
+                    lang_name = self.localization.get_language_name(lang_code, in_own_language=True)
+                    
+                    self.bot.edit_message_text(
+                        chat_id=user_id,
+                        message_id=call.message.message_id,
+                        text=self.get_text('language_changed', call.message, language=lang_name),
+                        parse_mode='HTML'
+                    )
+                else:
+                    self.bot.edit_message_text(
+                        chat_id=user_id,
+                        message_id=call.message.message_id,
+                        text=self.get_text('language_unsupported', call.message),
+                        parse_mode='HTML'
+                    )
+            
+            elif callback_data.startswith(self.CALLBACK_MORE_INFO):
+                # Handle more info request
+                media_id = int(callback_data.replace(self.CALLBACK_MORE_INFO, ''))
+                self.show_media_info(user_id, media_id, call.message)
+    
+    def process_search(self, message, query, status_msg):
+        """Process search query and initialize session with FIXED total_images."""
+        user = message.from_user
+        
+        # Check cache
+        cached_search = self.db.get_cached_search(user.id, query)
+        search_cache_id = None
+        media_items = []
+        
+        if cached_search:
+            search_cache_id = cached_search['id']
+            logger.info(f"Found cached search for user {user.id}: {query}")
+            
+            # Get total count from database (fixed for this session)
+            total_items = self.db.get_total_images_count(search_cache_id)
+            
+            # Get first batch
+            media_items = self.db.get_unsent_images(
+                search_cache_id,
+                self.batch_size,
+                0
+            )
+            
+            # Initialize session with FIXED total_images
+            self.db.update_user_session(
+                user_id=user.id,
+                search_cache_id=search_cache_id,
+                offset=len(media_items),
+                total_images=total_items,  # THIS NUMBER WON'T CHANGE DURING SESSION
+                last_query=query,
+                last_message_id=status_msg.message_id
+            )
+        
+        # If no cache or no items, download new ones
+        if not media_items:
+            try:
+                self.bot.edit_message_text(
+                    chat_id=user.id,
+                    message_id=status_msg.message_id,
+                    text=self.get_text('downloading', message, query=query),
+                    parse_mode='HTML'
+                )
+            except:
+                pass
+            
+            # Download media (including videos)
+            downloaded = self.downloader.download_images(
+                query,
+                Config.MAX_IMAGES_PER_REQUEST,
+                include_videos=True
+            )
+            
+            if not downloaded:
+                try:
+                    self.bot.edit_message_text(
+                        chat_id=user.id,
+                        message_id=status_msg.message_id,
+                        text=self.get_text('no_images_found', message),
+                        parse_mode='HTML'
+                    )
+                except:
+                    self.bot.reply_to(
+                        message,
+                        self.get_text('no_images_found', message),
+                        parse_mode='HTML'
+                    )
+                return
+            
+            # Create cache entry if needed
+            if not cached_search:
+                normalized = self.db.normalize_query(query)
+                query_md5 = self.db.get_query_md5(query)
+                search_cache_id = self.db.create_search_cache(
+                    user.id, query, normalized, query_md5
+                )
+            
+            if search_cache_id:
+                # Save downloaded items
+                saved = self.db.save_images_to_cache(search_cache_id, downloaded)
+                logger.info(f"Saved {saved} items to cache for search {search_cache_id}")
+                
+                # Get FINAL total count (fixed for this session)
+                total_items = self.db.get_total_images_count(search_cache_id)
+                
+                # Update cache with final total
+                self.db.update_search_cache_total(search_cache_id, total_items)
+                
+                # Get first batch
+                media_items = self.db.get_unsent_images(search_cache_id, self.batch_size, 0)
+                
+                # Initialize session with FIXED total_images
+                self.db.update_user_session(
+                    user_id=user.id,
+                    search_cache_id=search_cache_id,
+                    offset=len(media_items),
+                    total_images=total_items,  # THIS NUMBER WON'T CHANGE DURING SESSION
+                    last_query=query,
+                    last_message_id=status_msg.message_id
+                )
+        
+        if not media_items:
+            try:
+                self.bot.edit_message_text(
+                    chat_id=user.id,
+                    message_id=status_msg.message_id,
+                    text=self.get_text('no_images_available', message),
+                    parse_mode='HTML'
+                )
+            except:
+                self.bot.reply_to(
+                    message,
+                    self.get_text('no_images_available', message),
+                    parse_mode='HTML'
+                )
+            return
+        
+        # Delete status message
+        try:
+            self.bot.delete_message(user.id, status_msg.message_id)
+        except:
+            pass
+        
+        # Get session (already has fixed total_images)
+        session = self.db.get_user_session(user.id)
+        
+        # Send first batch
+        self.send_media_batch(
+            user.id,
+            media_items,
+            current_batch=1,
+            total_batches=(session['total_images'] + self.batch_size - 1) // self.batch_size,
+            search_cache_id=search_cache_id,
+            message=message
+        )
+    
+    def send_media_batch(self, user_id, media_items, current_batch, total_batches, 
+                        search_cache_id, message=None):
+        """Send a batch of media (images and videos) to user."""
+        if not media_items:
+            self.bot.send_message(
+                user_id,
+                self.get_text('no_more_images', message, user_id=user_id),
+                parse_mode='HTML'
+            )
+            return
+        
+        # Create temporary message for localization if needed
+        if message is None:
+            class TempMessage:
+                def __init__(self, user_id):
+                    self.from_user = type('obj', (object,), {'id': user_id, 'language_code': None})
+            message = TempMessage(user_id)
+        
+        # Send batch info
+        self.bot.send_message(
+            user_id,
+            self.get_text(
+                'batch_info', message,
+                current=current_batch,
+                total=total_batches,
+                count=len(media_items)
+            ),
+            parse_mode='HTML'
+        )
+        
+        # Send media items
+        sent_ids = []
+        
+        for item in media_items:
+            try:
+                if not item['local_path'] or not Path(item['local_path']).exists():
+                    self.bot.send_message(
+                        user_id,
+                        self.get_text('file_not_found', message, filename=item.get('file_name', 'unknown'))
+                    )
+                    continue
+                
+                file_path = item['local_path']
+                file_size = os.path.getsize(file_path)
+                
+                # Get media type from database field 'image_type'
+                media_type = item.get('image_type', 'image')
+                
+                # Create caption with metadata
+                caption_parts = []
+                if item.get('caption'):
+                    caption_parts.append(item['caption'][:100])
+                
+                if media_type == 'video':
+                    # Add video info
+                    info = []
+                    if item.get('width') and item.get('height') and item['width'] > 0 and item['height'] > 0:
+                        info.append(f"{item['width']}x{item['height']}")
+                    if item.get('duration') and item['duration'] > 0:
+                        info.append(self.format_duration(item['duration']))
+                    if info:
+                        caption_parts.append(f"📹 {' • '.join(info)}")
+                
+                # Add file size
+                if file_size > 0:
+                    caption_parts.append(f"💾 {self.format_file_size(file_size)}")
+                
+                caption = ' | '.join(caption_parts) if caption_parts else None
+                
+                # Send based on type and size
+                with open(file_path, 'rb') as media_file:
+                    if media_type == 'video':
+                        # Send as video
+                        print(item)
+                        if file_size <= self.MAX_VIDEO_SIZE:
+                            self.bot.send_video(
+                                user_id,
+                                media_file,
+                                caption=caption,
+                                width=item.get('width') if item.get('width') and item['width'] > 0 else None,
+                                height=item.get('height') if item.get('height') and item['height'] > 0 else None,
+                                duration=int(item.get('duration')) if item.get('duration') and item['duration'] > 0 else None,
+                                supports_streaming=True
+                            )
+                        else:
+                            # Video too large, send as document
+                            self.bot.send_document(
+                                user_id,
+                                media_file,
+                                caption=f"🎥 Video (large) - {caption}" if caption else "🎥 Video (large)",
+                                visible_file_name=item['file_name']
+                            )
+                    else:
+                        # Send as photo
+                        if file_size <= self.MAX_PHOTO_SIZE:
+                            self.bot.send_photo(
+                                user_id,
+                                media_file,
+                                caption=caption
+                            )
+                        else:
+                            # Image too large, send as document
+                            self.bot.send_document(
+                                user_id,
+                                media_file,
+                                caption=f"🖼️ Image (large) - {caption}" if caption else "🖼️ Image (large)",
+                                visible_file_name=item['file_name']
+                            )
+                
+                sent_ids.append(item['id'])
+                time.sleep(0.5)  # Delay to avoid flooding
+                
+            except Exception as e:
+                logger.error(f"Error sending media: {e}")
+                self.bot.send_message(
+                    user_id,
+                    self.get_text('failed_to_send', message, filename=item.get('file_name', 'unknown'))
+                )
+        
+        # Mark successfully sent images (only those that actually sent)
+        if sent_ids:
+            self.db.mark_images_as_sent(sent_ids)
+        
+        # Get updated session (only offset changed, total_images is the same!)
+        session = self.db.get_user_session(user_id)
+        
+        # Create navigation keyboard
+        keyboard = types.InlineKeyboardMarkup()
+        
+        # Calculate if there are more items to show using FIXED total_images
+        if session:
+            current_offset = session['current_offset']
+            total_items = session['total_images']  # THIS IS CONSTANT!
+            
+            # Add Next button if there are more items
+            if current_offset < total_items:
+                remaining = total_items - current_offset
+                next_count = min(self.batch_size, remaining)
+                keyboard.add(types.InlineKeyboardButton(
+                    self.get_text('next', message, count=next_count),
+                    callback_data=self.CALLBACK_NEXT
+                ))
+        
+        # Always add Stop and New Search buttons
+        keyboard.add(
+            types.InlineKeyboardButton(
+                self.get_text('new_search', message),
+                callback_data=self.CALLBACK_NEW_SEARCH
+            )
+        )
+        
+        # Send navigation message with FIXED total_items
+        current = session['current_offset'] if session else len(media_items)
+        total = session['total_images'] if session else len(media_items)
+        
+        # Add progress info
+        progress_text = self.get_text('progress', message, current=current, total=total)
+        
+        # Add remaining count if there are more
+        if session and current < total:
+            remaining = total - current
+            progress_text += f"\n{self.get_text('more_available', message, count=remaining)}"
+        
+        nav_msg = (
+            f"{self.get_text('what_next', message)}\n\n"
+            f"{progress_text}"
+        )
+        
+        self.bot.send_message(
+            user_id,
+            nav_msg,
+            parse_mode='HTML',
+            reply_markup=keyboard
+        )
+    
+    def show_media_info(self, user_id: int, media_id: int, message):
+        """Show detailed information about a media item."""
+        # Get media info from database
+        cursor = self.db.connection.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT * FROM downloaded_images WHERE id = %s
+        """, (media_id,))
+        media = cursor.fetchone()
+        
+        if not media:
+            self.bot.send_message(
+                user_id,
+                self.get_text('file_not_found', message, filename='unknown')
+            )
+            return
+        
+        media_type = media.get('image_type', 'image')
+        type_emoji = '🎥' if media_type == 'video' else '🖼️'
+        
+        info_text = f"<b>Media Information:</b>\n"
+        info_text += f"Type: {type_emoji} {'Video' if media_type == 'video' else 'Image'}\n"
+        info_text += f"File: {media['file_name']}\n"
+        info_text += f"Size: {self.format_file_size(media['file_size'])}\n"
+        
+        if media.get('width') and media.get('height') and media['width'] > 0 and media['height'] > 0:
+            info_text += f"Resolution: {media['width']}x{media['height']}\n"
+        
+        if media_type == 'video' and media.get('duration') and media['duration'] > 0:
+            info_text += f"Duration: {self.format_duration(media['duration'])}\n"
+        
+        if media.get('caption'):
+            info_text += f"\nCaption: {media['caption'][:200]}"
+        
+        self.bot.send_message(
+            user_id,
+            info_text,
+            parse_mode='HTML'
+        )
+    
+    def run(self):
+        """Run the bot."""
+        logger.info("Starting Pinterest Bot with video support...")
+        print("\n" + "="*50)
+        print("🤖 Pinterest Image & Video Bot Started")
+        print("="*50)
+        print(f"Bot Token: {Config.BOT_TOKEN[:10]}...")
+        print(f"Items per batch: {self.batch_size}")
+        print(f"Supported languages: {', '.join(self.localization.LANGUAGES.values())}")
+        if Config.INCLUDE_VIDEO:
+            print(f"Video support: ✅ Enabled")
+        print("="*50 + "\n")
+        
+        self.bot.infinity_polling()
+    
+    def __del__(self):
+        """Cleanup on deletion."""
+        if hasattr(self, 'db'):
+            self.db.close()
+
+
+# ============================================================
+# FILE: .\bot\config.py
+# TYPE: .PY
+# ============================================================
+
+"""Configuration management for the bot."""
+
+import os
+from dotenv import load_dotenv
+from pathlib import Path
+
+# Load environment variables
+load_dotenv()
+
+class Config:
+    """Bot configuration class."""
+    
+    # Telegram
+    BOT_TOKEN = os.getenv('BOT_TOKEN')
+    if not BOT_TOKEN:
+        raise ValueError("BOT_TOKEN must be set in .env file")
+    
+    # Database
+    DB_CONFIG = {
+        'host': os.getenv('DB_HOST', 'localhost'),
+        'port': os.getenv('DB_PORT', '3306'),
+        'database': os.getenv('DB_NAME', 'pinterest_bot_cache'),
+        'user': os.getenv('DB_USER', 'root'),
+        'password': os.getenv('DB_PASSWORD', ''),
+        'charset': os.getenv('DB_CHARSET', 'utf8mb4'),
+        'use_pure': True
+    }
+    
+    # Bot settings
+    IMAGES_PER_BATCH = int(os.getenv('IMAGES_PER_BATCH', '5'))
+    MAX_IMAGES_PER_REQUEST = int(os.getenv('MAX_IMAGES_PER_REQUEST', '50'))
+    DOWNLOAD_TIMEOUT = int(os.getenv('DOWNLOAD_TIMEOUT', '300'))
+    TEMP_DOWNLOAD_DIR = os.getenv('TEMP_DOWNLOAD_DIR', 'temp_downloads')
+    INCLUDE_VIDEO = os.getenv('INCLUDE_VIDEO', False)
+    
+    # Paths
+    BASE_DIR = Path(__file__).parent
+    DOWNLOAD_DIR = BASE_DIR / TEMP_DOWNLOAD_DIR
+
+
+# ============================================================
+# FILE: .\bot\database.py
+# TYPE: .PY
+# ============================================================
+
+# ============================================================
+# FILE: database.py (UPDATED)
+# TYPE: .PY
+# ============================================================
+
+"""Database management module with language support."""
+
+import mysql.connector
+from mysql.connector import Error
+import json
+import hashlib
+import logging
+from datetime import datetime
+from typing import Optional, List, Dict, Any
+from config import Config
+
+class DatabaseManager:
+    """Manages database operations for caching."""
+    
+    def __init__(self):
+        """Initialize database connection."""
+        self.config = Config.DB_CONFIG
+        self.connection = None
+        self.connect()
+        self.create_tables()
+    
+    def connect(self) -> None:
+        """Establish database connection."""
+        try:
+            self.connection = mysql.connector.connect(**self.config)
+            print("✓ Connected to MySQL database")
+        except Error as e:
+            print(f"✗ Database connection error: {e}")
+            raise
+    
+    def create_tables(self) -> None:
+        """Create necessary tables if they don't exist."""
+        cursor = self.connection.cursor()
+        
+        # Users table with language preference
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                user_id BIGINT PRIMARY KEY,
+                username VARCHAR(255),
+                first_name VARCHAR(255),
+                last_name VARCHAR(255),
+                language_code VARCHAR(10) DEFAULT 'en',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_last_activity (last_activity),
+                INDEX idx_language (language_code)
+            ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+        """)
+        
+        # Search queries cache
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS search_cache (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                original_query VARCHAR(255) NOT NULL,
+                normalized_query VARCHAR(255) NOT NULL,
+                query_md5 VARCHAR(32) NOT NULL,
+                search_params JSON,
+                total_images INT DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_user_query (query_md5),
+                INDEX idx_created (created_at)
+            ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+        """)
+        
+        # Downloaded images cache
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS downloaded_images (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                search_cache_id INT NOT NULL,
+                image_url VARCHAR(1000) NOT NULL,
+                local_path VARCHAR(500),
+                file_name VARCHAR(255),
+                file_size INT,
+                width INT,
+                height INT,
+                image_type VARCHAR(20) DEFAULT 'image',
+                caption TEXT,
+                downloaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_sent BOOLEAN DEFAULT FALSE,
+                sent_at TIMESTAMP NULL,
+                FOREIGN KEY (search_cache_id) REFERENCES search_cache(id) ON DELETE CASCADE,
+                INDEX idx_search_cache (search_cache_id),
+                INDEX idx_is_sent (is_sent),
+                UNIQUE KEY unique_image_per_search (search_cache_id, image_url(255))
+            ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+        """)
+        
+        # User sessions for pagination
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_sessions (
+                user_id BIGINT PRIMARY KEY,
+                current_search_cache_id INT,
+                current_offset INT DEFAULT 0,
+                total_images INT DEFAULT 0,
+                last_query VARCHAR(255),
+                last_message_id INT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+                FOREIGN KEY (current_search_cache_id) REFERENCES search_cache(id) ON DELETE SET NULL,
+                INDEX idx_updated (updated_at)
+            ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+        """)
+        
+        self.connection.commit()
+        print("✓ Database tables created/verified")
+    
+    def register_user(self, user_id: int, username: str = None, 
+                     first_name: str = None, last_name: str = None,
+                     language_code: str = 'en') -> None:
+        """Register or update user in database."""
+        cursor = self.connection.cursor()
+        cursor.execute("""
+            INSERT INTO users (user_id, username, first_name, last_name, language_code)
+            VALUES (%s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+            username = VALUES(username),
+            first_name = VALUES(first_name),
+            last_name = VALUES(last_name),
+            last_activity = CURRENT_TIMESTAMP
+        """, (user_id, username, first_name, last_name, language_code))
+        self.connection.commit()
+    
+    def update_user_language(self, user_id: int, language_code: str) -> None:
+        """Update user's language preference."""
+        cursor = self.connection.cursor()
+
+        cursor.execute("""
+            UPDATE users 
+            SET language_code = %s
+            WHERE user_id = %s 
+        """, (language_code, user_id))
+        self.connection.commit()
+    
+    def get_user_language(self, user_id: int) -> str:
+        """Get user's language preference."""
+        cursor = self.connection.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT language_code FROM users 
+            WHERE user_id = %s
+        """, (user_id,))
+        result = cursor.fetchone()
+        return result['language_code'] if result else 'en'
+    
+    def normalize_query(self, query: str) -> str:
+        """Normalize search query."""
+        import re
+        normalized = query.lower()
+        normalized = re.sub(r'[^\w\s]', ' ', normalized)
+        normalized = re.sub(r'\s+', ' ', normalized)
+        return normalized.strip()
+    
+    def get_query_md5(self, query: str) -> str:
+        """Get MD5 hash of normalized query."""
+        normalized = self.normalize_query(query)
+        return hashlib.md5(normalized.encode('utf-8')).hexdigest()
+    
+    def get_cached_search(self, user_id: int, query: str) -> Optional[Dict[str, Any]]:
+        """Get cached search for user and query."""
+        query_md5 = self.get_query_md5(query)
+        cursor = self.connection.cursor(dictionary=True)
+        
+        cursor.execute(f"SELECT * FROM search_cache WHERE query_md5 = '{query_md5}' ORDER BY created_at DESC LIMIT 1")
+        
+        return cursor.fetchone()
+    
+    def create_search_cache(self, user_id: int, original_query: str, 
+                           normalized_query: str, query_md5: str, 
+                           params: Dict = None) -> int:
+        """Create new search cache entry."""
+        cursor = self.connection.cursor()
+        cursor.execute("""
+            INSERT INTO search_cache (original_query, normalized_query, query_md5, search_params)
+            VALUES (%s, %s, %s, %s)
+        """, (original_query, normalized_query, query_md5, 
+              json.dumps(params, ensure_ascii=False) if params else None))
+        self.connection.commit()
+        return cursor.lastrowid
+    
+    def save_images_to_cache(self, search_cache_id: int, images: List[Dict]) -> int:
+        """Save downloaded images to cache."""
+        cursor = self.connection.cursor()
+        saved_count = 0
+        
+        for img in images:
+            try:
+                cursor.execute("""
+                    INSERT INTO downloaded_images 
+                    (search_cache_id, image_url, local_path, file_name, file_size, 
+                     width, height, image_type, caption)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                    local_path = VALUES(local_path),
+                    file_size = VALUES(file_size),
+                    width = VALUES(width),
+                    height = VALUES(height),
+                    caption = VALUES(caption)
+                """, (
+                    search_cache_id,
+                    img.get('url', ''),
+                    img.get('local_path'),
+                    img.get('file_name'),
+                    img.get('file_size'),
+                    img.get('width'),
+                    img.get('height'),
+                    img.get('type', 'image'),
+                    img.get('caption')
+                ))
+                saved_count += 1
+            except Error as e:
+                print(f"Error saving image: {e}")
+                continue
+        
+        # Update total images count
+        cursor.execute("""
+            UPDATE search_cache 
+            SET total_images = (
+                SELECT COUNT(*) FROM downloaded_images 
+                WHERE search_cache_id = %s
+            )
+            WHERE id = %s
+        """, (search_cache_id, search_cache_id))
+        
+        self.connection.commit()
+        return saved_count
+    
+    def get_unsent_images(self, search_cache_id: int, limit: int, offset: int = 0) -> List[Dict]:
+        """Get unsent images for pagination."""
+        print(f"Get unsent image {search_cache_id}, {offset}, {limit}")
+        cursor = self.connection.cursor(dictionary=True)
+
+        where = 'search_cache_id = %s AND is_sent = FALSE'
+        if not Config.INCLUDE_VIDEO:
+            where += " AND image_type = 'image'"
+
+        cursor.execute(f"""
+            SELECT * FROM downloaded_images 
+            WHERE {where}
+            ORDER BY id
+            LIMIT %s OFFSET %s
+        """, (search_cache_id, limit, offset))
+        return cursor.fetchall()
+    
+    def mark_images_as_sent(self, image_ids: List[int]) -> None:
+        """Mark images as sent."""
+        if not image_ids:
+            return
+        
+        cursor = self.connection.cursor()
+        format_strings = ','.join(['%s'] * len(image_ids))
+        cursor.execute(f"""
+            UPDATE downloaded_images 
+            SET is_sent = TRUE, sent_at = CURRENT_TIMESTAMP
+            WHERE id IN ({format_strings})
+        """, tuple(image_ids))
+        self.connection.commit()
+    
+    def get_user_session(self, user_id: int) -> Optional[Dict]:
+        """Get user session data."""
+        cursor = self.connection.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT * FROM user_sessions 
+            WHERE user_id = %s
+        """, (user_id,))
+        return cursor.fetchone()
+    
+    def reset_user_session(self, user_id: int) -> None:
+        """Reset user session."""
+        cursor = self.connection.cursor()
+        cursor.execute("""
+            UPDATE user_sessions 
+            SET current_offset = 0
+            WHERE user_id = %s
+        """, (user_id,))
+        self.connection.commit()
+    
+    def close(self):
+        """Close database connection."""
+        if self.connection and self.connection.is_connected():
+            self.connection.close()
+
+    def get_total_images_count(self, search_cache_id: int) -> int:
+        """Get total number of images in cache."""
+        cursor = self.connection.cursor()
+
+        where = 'search_cache_id = %s'
+        if not Config.INCLUDE_VIDEO:
+            where += " AND image_type = 'image'"
+
+        cursor.execute(f"""
+            SELECT COUNT(*) FROM downloaded_images 
+            WHERE {where}
+        """, (search_cache_id,))
+        result = cursor.fetchone()
+        return result[0] if result else 0
+    
+    def update_search_cache_total(self, search_cache_id: int, total: int) -> None:
+        """Update total images count in search cache."""
+        cursor = self.connection.cursor()
+        cursor.execute("""
+            UPDATE search_cache 
+            SET total_images = %s
+            WHERE id = %s
+        """, (total, search_cache_id))
+        self.connection.commit()
+    
+    def update_user_session(self, user_id: int, search_cache_id: int = None,
+                           offset: int = None, total_images: int = None,
+                           last_query: str = None, last_message_id: int = None) -> None:
+        """Update user session data."""
+        cursor = self.connection.cursor()
+        
+        # First check if session exists
+        cursor.execute("SELECT user_id FROM user_sessions WHERE user_id = %s", (user_id,))
+        exists = cursor.fetchone()
+        
+        if exists:
+            # Update existing session
+            update_parts = []
+            params = []
+            
+            if search_cache_id is not None:
+                update_parts.append("current_search_cache_id = %s")
+                params.append(search_cache_id)
+            
+            if offset is not None:
+                update_parts.append("current_offset = %s")
+                params.append(offset)
+            
+            if total_images is not None:
+                update_parts.append("total_images = %s")
+                params.append(total_images)
+            
+            if last_query is not None:
+                update_parts.append("last_query = %s")
+                params.append(last_query)
+            
+            if last_message_id is not None:
+                update_parts.append("last_message_id = %s")
+                params.append(last_message_id)
+            
+            update_parts.append("updated_at = CURRENT_TIMESTAMP")
+            
+            if update_parts:
+                query = f"""
+                    UPDATE user_sessions 
+                    SET {', '.join(update_parts)}
+                    WHERE user_id = %s
+                """
+
+                print(query);
+                params.append(user_id)
+                cursor.execute(query, tuple(params))
+        else:
+            # Insert new session
+            cursor.execute("""
+                INSERT INTO user_sessions 
+                (user_id, current_search_cache_id, current_offset, total_images, last_query, last_message_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (user_id, search_cache_id, offset, total_images, last_query, last_message_id))
+        
+        self.connection.commit()
+
+
+# ============================================================
+# FILE: .\bot\fix_imports.py
+# TYPE: .PY
+# ============================================================
+
+# ============================================================
+# FILE: fix_imports.py
+# TYPE: .PY
+# ============================================================
+
+"""Fix for missing imghdr module in Python 3.13."""
+
+import sys
+import os
+
+# Add fallback for imghdr if missing
+try:
+    import imghdr
+except ImportError:
+    # Create a simple imghdr replacement
+    import struct
+    import io
+    
+    def what(file, h=None):
+        """Simple imghdr replacement"""
+        if h is None:
+            if isinstance(file, str):
+                with open(file, 'rb') as f:
+                    h = f.read(32)
+            else:
+                location = file.tell()
+                h = file.read(32)
+                file.seek(location)
+        
+        # Check for known image formats
+        if h.startswith(b'\xff\xd8'):
+            return 'jpeg'
+        elif h.startswith(b'\x89PNG\r\n\x1a\n'):
+            return 'png'
+        elif h.startswith(b'GIF87a') or h.startswith(b'GIF89a'):
+            return 'gif'
+        elif h.startswith(b'RIFF') and h[8:12] == b'WEBP':
+            return 'webp'
+        elif h.startswith(b'BM'):
+            return 'bmp'
+        return None
+    
+    # Create mock module
+    class MockImghdr:
+        what = staticmethod(what)
+    
+    sys.modules['imghdr'] = MockImghdr()
+    print("✓ Created mock imghdr module")
+
+print("✓ Imports fixed")
+
+
+# ============================================================
+# FILE: .\bot\localization.py
+# TYPE: .PY
+# ============================================================
+
+# ============================================================
+# FILE: localization.py (FIXED)
+# TYPE: .PY
+# ============================================================
+
+"""Localization module for Pinterest Bot using pyTelegramBotAPI."""
+
+import json
+from pathlib import Path
+from typing import Dict, Optional
+import telebot
+from telebot import types
+
+class LocalizationManager:
+    """Manages bot localization with JSON language files."""
+    
+    # Supported languages
+    LANGUAGES = {
+        'en': 'English',
+        'ru': 'Русский',
+        'es': 'Español',
+        'zh': '中文'
+    }
+    
+    # Default language
+    DEFAULT_LANGUAGE = 'en'
+    
+    def __init__(self, locales_dir: str = "locales"):
+        """Initialize localization manager."""
+        self.locales_dir = Path(__file__).parent / locales_dir
+        self.translations: Dict[str, Dict[str, str]] = {}
+        self.user_languages: Dict[int, str] = {}  # Cache user language preferences
+        self.load_translations()
+        
+        # Print loaded translations for debugging
+        print("\n📚 Loaded translations:")
+        for lang_code in self.translations:
+            print(f"  {lang_code}: {len(self.translations[lang_code])} keys")
+    
+    def load_translations(self):
+        """Load all translation JSON files."""
+        if not self.locales_dir.exists():
+            self.locales_dir.mkdir(exist_ok=True)
+            print(f"✓ Created locales directory: {self.locales_dir}")
+        
+        # First load English as default
+        en_path = self.locales_dir / "en.json"
+        if en_path.exists():
+            with open(en_path, 'r', encoding='utf-8') as f:
+                self.translations['en'] = json.load(f)
+            print(f"✓ Loaded translations for en")
+        else:
+            print(f"⚠️ English translation file not found: {en_path}")
+            self.translations['en'] = self._create_default_translations()
+        
+        # Load other languages
+        for lang_code in self.LANGUAGES.keys():
+            if lang_code == 'en':
+                continue
+                
+            file_path = self.locales_dir / f"{lang_code}.json"
+            try:
+                if file_path.exists():
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        self.translations[lang_code] = json.load(f)
+                    print(f"✓ Loaded translations for {lang_code}")
+                else:
+                    print(f"⚠️ Translation file not found: {file_path}")
+                    # Create empty dict, will fall back to English
+                    self.translations[lang_code] = {}
+            except Exception as e:
+                print(f"✗ Error loading {lang_code}.json: {e}")
+                self.translations[lang_code] = {}
+    
+    def _create_default_translations(self) -> Dict[str, str]:
+        """Create minimal default translations if file is missing."""
+        return {
+            "language_name": "English",
+            "welcome": "👋 <b>Welcome, {name}!</b>",
+            "help": "🤖 <b>Help</b>",
+            "language_prompt": "🌐 <b>Select language:</b>",
+            "language_changed": "✅ <b>Language changed!</b>",
+            "language_unsupported": "❌ Language not supported.",
+            "searching": "🔍 <b>Searching:</b> {query}",
+            "downloading": "📥 Downloading...",
+            "no_images_found": "❌ No images found",
+            "no_images_available": "❌ No images available",
+            "no_more_images": "✨ No more images",
+            "session_expired": "⚠️ Session expired",
+            "batch_info": "📸 Batch {current} of {total}",
+            "progress": "📊 Progress: {current}/{total}",
+            "what_next": "<b>What would you like to do?</b>",
+            "next": "▶️ Next {count}",
+            "stop": "⏹️ Stop",
+            "new_search": "🆕 New Search",
+            "search_stopped": "⏹️ Search stopped",
+            "ready_for_search": "🆕 Ready for new search",
+            "error_occurred": "❌ Error occurred",
+            "file_not_found": "⚠️ File not found: {filename}",
+            "failed_to_send": "⚠️ Failed to send: {filename}",
+            "empty_query": "Please enter a search query",
+            "lang_en": "English",
+            "lang_ru": "Russian",
+            "lang_es": "Spanish",
+            "lang_zh": "Chinese"
+        }
+    
+    def get_user_language(self, message) -> str:
+        """
+        Get user's preferred language.
+        Detects from message and falls back to stored preference.
+        """
+        user_id = message.from_user.id
+        
+        # Check if we already have language for this user
+        if user_id in self.user_languages:
+            return self.user_languages[user_id]
+        
+        # Try to detect from Telegram language code
+        if message.from_user.language_code:
+            lang_code = message.from_user.language_code.split('-')[0]
+            if lang_code in self.LANGUAGES:
+                self.user_languages[user_id] = lang_code
+                return lang_code
+        
+        # Default to English
+        self.user_languages[user_id] = self.DEFAULT_LANGUAGE
+        return self.DEFAULT_LANGUAGE
+    
+    def set_user_language(self, user_id: int, lang_code: str) -> bool:
+        """Set user's preferred language."""
+        if lang_code in self.LANGUAGES:
+            self.user_languages[user_id] = lang_code
+            return True
+        return False
+    
+    def get_text(self, key: str, message=None, user_id: int = None, **kwargs) -> str:
+        """
+        Get translated text for a key.
+        Either provide message or user_id.
+        """
+        # Determine language
+        if message:
+            lang_code = self.get_user_language(message)
+        elif user_id:
+            lang_code = self.user_languages.get(user_id, self.DEFAULT_LANGUAGE)
+        else:
+            lang_code = self.DEFAULT_LANGUAGE
+        
+        # Get translation with fallback to English
+        translation = self.translations.get(lang_code, {})
+        text = translation.get(key)
+        
+        # If not found in selected language, try English
+        if text is None:
+            text = self.translations['en'].get(key)
+            
+        # If still not found, return the key itself
+        if text is None:
+            print(f"⚠️ Missing translation for key: '{key}' in language '{lang_code}'")
+            return key
+        
+        # Format with kwargs
+        if kwargs:
+            try:
+                text = text.format(**kwargs)
+            except KeyError as e:
+                print(f"⚠️ Missing format key {e} for '{key}'")
+            except Exception as e:
+                print(f"⚠️ Error formatting text '{key}': {e}")
+        
+        return text
+    
+    def get_language_keyboard(self, message):
+        """Create inline keyboard for language selection."""
+        current_lang = self.get_user_language(message)
+        keyboard = types.InlineKeyboardMarkup()
+        row = []
+        
+        for i, (lang_code, lang_name) in enumerate(self.LANGUAGES.items()):
+            # Add indicator for current language
+            display_name = f"{lang_name} {'✅' if lang_code == current_lang else ''}"
+            row.append(types.InlineKeyboardButton(
+                display_name,
+                callback_data=f"lang_{lang_code}"
+            ))
+            
+            # 2 buttons per row
+            if len(row) == 2 or i == len(self.LANGUAGES) - 1:
+                keyboard.row(*row)
+                row = []
+        
+        return keyboard
+    
+    def get_language_name(self, lang_code: str, in_own_language: bool = True) -> str:
+        """Get language name."""
+        if in_own_language:
+            # Return name in the language itself
+            return self.LANGUAGES.get(lang_code, lang_code)
+        else:
+            # Return English name
+            names = {
+                'en': 'English',
+                'ru': 'Russian',
+                'es': 'Spanish',
+                'zh': 'Chinese'
+            }
+            return names.get(lang_code, lang_code)
+
+
+# ============================================================
+# FILE: .\bot\main.py
+# TYPE: .PY
+# ============================================================
+
+# ============================================================
+# FILE: main.py (FINAL)
+# TYPE: .PY
+#============================================================
+
+"""Main entry point for Pinterest Telegram Bot."""
+
+import sys
+import os
+from pathlib import Path
+
+# Add current directory to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+# Используем telebot версию
+from bot_telebot import PinterestBot
+from config import Config
+
+def check_requirements():
+    """Check if all requirements are met."""
+    # Check for pinterest-dl
+    try:
+        from pinterest_downloader import PinterestDownloader
+        if not PinterestDownloader.check_pinterest_dl():
+            print("⚠️  Warning: pinterest-dl not found. Install it with:")
+            print("   pip install pinterest-dl")
+    except:
+        print("⚠️  Warning: Could not check pinterest-dl")
+    
+    # Create download directory
+    Config.DOWNLOAD_DIR.mkdir(exist_ok=True)
+    
+    # Check database connection
+    try:
+        from database import DatabaseManager
+        db = DatabaseManager()
+        db.close()
+        print("✓ Database connection successful")
+    except Exception as e:
+        print(f"✗ Database error: {e}")
+        print("Please check your .env configuration")
+        return False
+    
+    return True
+
+def main():
+    """Main function."""
+    print("\n" + "="*50)
+    print("PINTEREST TELEGRAM BOT")
+    print("="*50)
+    
+    # Check if .env exists
+    if not Path('.env').exists():
+        print("✗ .env file not found!")
+        print("\nPlease create .env file with the following content:")
+        print("""
+BOT_TOKEN=your_telegram_bot_token_here
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=pinterest_bot_cache
+DB_USER=root
+DB_PASSWORD=your_password_here
+DB_CHARSET=utf8mb4
+IMAGES_PER_BATCH=5
+MAX_IMAGES_PER_REQUEST=50
+DOWNLOAD_TIMEOUT=300
+TEMP_DOWNLOAD_DIR=temp_downloads
+        """)
+        return
+    
+    # Check requirements
+    if not check_requirements():
+        print("\n✗ Requirements check failed. Please fix the issues above.")
+        return
+    
+    try:
+        # Create and run bot
+        bot = PinterestBot()
+        bot.run()
+    except KeyboardInterrupt:
+        print("\n\n👋 Bot stopped by user")
+    except Exception as e:
+        print(f"\n❌ Fatal error: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        print("\n" + "="*50)
+        print("Bot shutdown complete")
+        print("="*50)
+
+if __name__ == "__main__":
+    main()
+
+
+# ============================================================
+# FILE: .\bot\pinterest_downloader.py
+# TYPE: .PY
+# ============================================================
+
+# ============================================================
+# FILE: pinterest_downloader.py (UPDATED WITH VIDEO SUPPORT)
+# TYPE: .PY
+#============================================================
+
+"""Pinterest downloader module with video support."""
+
+import os
+import subprocess
+import time
+from pathlib import Path
+from typing import List, Dict, Optional
+import hashlib
+import re
+from config import Config
+
+class PinterestDownloader:
+    """Handles Pinterest image and video downloading via pinterest-dl."""
+    
+    def __init__(self):
+        """Initialize downloader."""
+        self.download_dir = Config.DOWNLOAD_DIR
+        self.download_dir.mkdir(exist_ok=True)
+        self.timeout = Config.DOWNLOAD_TIMEOUT
+    
+    @staticmethod
+    def check_pinterest_dl() -> bool:
+        """Check if pinterest-dl is installed."""
+        try:
+            result = subprocess.run(
+                ['pinterest-dl', '--help'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            return result.returncode == 0
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return False
+    
+    def download_images(self, query: str, limit: int = 50, include_videos: bool = True) -> List[Dict]:
+        """
+        Download images and videos using pinterest-dl.
+        Returns list of downloaded media info.
+        """
+        # Create unique download directory for this query
+        query_hash = hashlib.md5(query.encode()).hexdigest()[:8]
+        safe_query = re.sub(r'[^\w\-_]', '_', query)[:30]
+        download_path = self.download_dir / f"{safe_query}_{query_hash}"
+        download_path.mkdir(exist_ok=True)
+        
+        # Build command
+        cmd = [
+            'pinterest-dl', 'search', f'"{query}"',
+            '-o', str(download_path),
+            '--num', str(limit)
+        ]
+        
+        # Add video flag if needed
+        if include_videos:
+            cmd.append('--video')
+        
+        cmd_str = ' '.join(cmd)
+        print(f"▶ Executing: {cmd_str}")
+        
+        try:
+            # Execute command
+            result = subprocess.run(
+                cmd_str,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=self.timeout
+            )
+            
+            if result.returncode != 0:
+                print(f"✗ Pinterest-dl error: {result.stderr}")
+                return []
+            
+            # Wait for files to be written
+            time.sleep(2)
+            
+            # Scan downloaded files
+            downloaded_media = self._scan_downloaded_files(download_path, query)
+            
+            print(f"✓ Downloaded {len(downloaded_media)} items")
+            images = [m for m in downloaded_media if m['type'] == 'image']
+            videos = [m for m in downloaded_media if m['type'] == 'video']
+            if images:
+                print(f"  - Images: {len(images)}")
+            if videos:
+                print(f"  - Videos: {len(videos)}")
+            
+            return downloaded_media
+            
+        except subprocess.TimeoutExpired:
+            print("✗ Pinterest-dl timeout")
+            return []
+        except Exception as e:
+            print(f"✗ Pinterest-dl execution error: {e}")
+            return []
+    
+    def _scan_downloaded_files(self, directory: Path, query: str) -> List[Dict]:
+        """Scan directory for downloaded files and extract metadata."""
+        media_files = []
+        
+        if not directory.exists():
+            return media_files
+        
+        # Supported extensions
+        image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+        video_extensions = {'.mp4', '.webm', '.mov', '.avi', '.mkv', '.flv'}
+        
+        for file_path in directory.glob('*'):
+            file_ext = file_path.suffix.lower()
+            
+            # Check if it's an image
+            if file_ext in image_extensions:
+                # Get file info
+                stat = file_path.stat()
+                
+                # Try to extract dimensions
+                width, height = self._get_media_dimensions(file_path)
+                
+                # Extract caption from filename or separate file
+                caption = self._extract_caption(file_path)
+                
+                media_files.append({
+                    'url': f"local://{file_path.name}",
+                    'local_path': str(file_path),
+                    'file_name': file_path.name,
+                    'file_size': stat.st_size,
+                    'width': width,
+                    'height': height,
+                    'type': 'image',
+                    'caption': caption,
+                    'duration': duration if file_ext in video_extensions else None,
+                    'thumbnail': thumbnail if file_ext in video_extensions else None
+                })
+            
+            # Check if it's a video
+            elif file_ext in video_extensions:
+                # Get file info
+                stat = file_path.stat()
+                
+                # Try to get video metadata
+                width, height, duration = self._get_video_metadata(file_path)
+                
+                # Look for thumbnail
+                thumbnail = self._find_thumbnail(file_path)
+                
+                media_files.append({
+                    'url': f"local://{file_path.name}",
+                    'local_path': str(file_path),
+                    'file_name': file_path.name,
+                    'file_size': stat.st_size,
+                    'width': width,
+                    'height': height,
+                    'type': 'video',
+                    'caption': None,
+                    'duration': duration,
+                    'thumbnail': thumbnail
+                })
+        
+        return media_files
+    
+    def _get_media_dimensions(self, file_path: Path) -> tuple:
+        """Get image dimensions."""
+        try:
+            from PIL import Image
+            with Image.open(file_path) as img:
+                return img.size
+        except:
+            return (0, 0)
+    
+    def _get_video_metadata(self, file_path: Path) -> tuple:
+        """Get video metadata (width, height, duration)."""
+        try:
+            # Try to use ffprobe if available
+            result = subprocess.run(
+                ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_streams', str(file_path)],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                import json
+                data = json.loads(result.stdout)
+                
+                # Find video stream
+                for stream in data.get('streams', []):
+                    if stream.get('codec_type') == 'video':
+                        width = int(stream.get('width', 0))
+                        height = int(stream.get('height', 0))
+                        
+                        # Get duration
+                        duration = float(stream.get('duration', 0))
+                        if duration == 0:
+                            # Try format duration
+                            duration = float(data.get('format', {}).get('duration', 0))
+                        
+                        return (width, height, duration)
+            
+            return (0, 0, 0)
+        except:
+            return (0, 0, 0)
+    
+    def _find_thumbnail(self, video_path: Path) -> Optional[str]:
+        """Find thumbnail for video."""
+        # Check for common thumbnail naming patterns
+        possible_thumbnails = [
+            video_path.with_suffix('.jpg'),
+            video_path.with_suffix('.png'),
+            video_path.with_suffix('.webp'),
+            video_path.parent / f"{video_path.stem}_thumb.jpg",
+            video_path.parent / f"{video_path.stem}_thumb.png"
+        ]
+        
+        for thumb in possible_thumbnails:
+            if thumb.exists():
+                return str(thumb)
+        
+        return None
+    
+    def _extract_caption(self, file_path: Path) -> Optional[str]:
+        """Extract caption from accompanying .txt file."""
+        caption_file = file_path.with_suffix('.txt')
+        if caption_file.exists():
+            try:
+                return caption_file.read_text(encoding='utf-8').strip()
+            except:
+                pass
+        return None
+
 
 # ============================================================
 # FILE: .\graber\examples\basic_scraping.py
@@ -1080,6 +3232,18 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n❌ Ошибка: {e}")
         sys.exit(1)
+
+
+# ============================================================
+# FILE: .\bot\requirements.txt
+# TYPE: .TXT
+# ============================================================
+
+pytelegrambotapi>=4.0.0
+mysql-connector-python>=8.0.0
+python-dotenv>=1.0.0
+pinterest-dl>=1.0.0
+Pillow>=10.0.0
 
 
 # ============================================================

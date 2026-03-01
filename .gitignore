@@ -2,6 +2,7 @@
 __*
 graber/downloads/
 graber/logs/
+bot/temp_downloads/
 
 **/*.log
 # Все изображения в любых подпапках

@@ -1,15 +1,15 @@
 # ============================================================
-# FILE: localization.py
+# FILE: localization.py (FIXED)
 # TYPE: .PY
 # ============================================================
 
-"""Localization module for Pinterest Bot."""
+"""Localization module for Pinterest Bot using pyTelegramBotAPI."""
 
 import json
-import os
 from pathlib import Path
 from typing import Dict, Optional
-from telegram import Update
+import telebot
+from telebot import types
 
 class LocalizationManager:
     """Manages bot localization with JSON language files."""
@@ -31,6 +31,11 @@ class LocalizationManager:
         self.translations: Dict[str, Dict[str, str]] = {}
         self.user_languages: Dict[int, str] = {}  # Cache user language preferences
         self.load_translations()
+        
+        # Print loaded translations for debugging
+        print("\n📚 Loaded translations:")
+        for lang_code in self.translations:
+            print(f"  {lang_code}: {len(self.translations[lang_code])} keys")
     
     def load_translations(self):
         """Load all translation JSON files."""
@@ -38,7 +43,21 @@ class LocalizationManager:
             self.locales_dir.mkdir(exist_ok=True)
             print(f"✓ Created locales directory: {self.locales_dir}")
         
+        # First load English as default
+        en_path = self.locales_dir / "en.json"
+        if en_path.exists():
+            with open(en_path, 'r', encoding='utf-8') as f:
+                self.translations['en'] = json.load(f)
+            print(f"✓ Loaded translations for en")
+        else:
+            print(f"⚠️ English translation file not found: {en_path}")
+            self.translations['en'] = self._create_default_translations()
+        
+        # Load other languages
         for lang_code in self.LANGUAGES.keys():
+            if lang_code == 'en':
+                continue
+                
             file_path = self.locales_dir / f"{lang_code}.json"
             try:
                 if file_path.exists():
@@ -47,30 +66,59 @@ class LocalizationManager:
                     print(f"✓ Loaded translations for {lang_code}")
                 else:
                     print(f"⚠️ Translation file not found: {file_path}")
-                    self.translations[lang_code] = self._create_default_translations(lang_code)
+                    # Create empty dict, will fall back to English
+                    self.translations[lang_code] = {}
             except Exception as e:
                 print(f"✗ Error loading {lang_code}.json: {e}")
-                self.translations[lang_code] = self._create_default_translations(lang_code)
+                self.translations[lang_code] = {}
     
-    def _create_default_translations(self, lang_code: str) -> Dict[str, str]:
-        """Create default translations if file is missing."""
-        # Return empty dict, will be populated with English defaults
-        return {}
+    def _create_default_translations(self) -> Dict[str, str]:
+        """Create minimal default translations if file is missing."""
+        return {
+            "language_name": "English",
+            "welcome": "👋 <b>Welcome, {name}!</b>",
+            "help": "🤖 <b>Help</b>",
+            "language_prompt": "🌐 <b>Select language:</b>",
+            "language_changed": "✅ <b>Language changed!</b>",
+            "language_unsupported": "❌ Language not supported.",
+            "searching": "🔍 <b>Searching:</b> {query}",
+            "downloading": "📥 Downloading...",
+            "no_images_found": "❌ No images found",
+            "no_images_available": "❌ No images available",
+            "no_more_images": "✨ No more images",
+            "session_expired": "⚠️ Session expired",
+            "batch_info": "📸 Batch {current} of {total}",
+            "progress": "📊 Progress: {current}/{total}",
+            "what_next": "<b>What would you like to do?</b>",
+            "next": "▶️ Next {count}",
+            "stop": "⏹️ Stop",
+            "new_search": "🆕 New Search",
+            "search_stopped": "⏹️ Search stopped",
+            "ready_for_search": "🆕 Ready for new search",
+            "error_occurred": "❌ Error occurred",
+            "file_not_found": "⚠️ File not found: {filename}",
+            "failed_to_send": "⚠️ Failed to send: {filename}",
+            "empty_query": "Please enter a search query",
+            "lang_en": "English",
+            "lang_ru": "Russian",
+            "lang_es": "Spanish",
+            "lang_zh": "Chinese"
+        }
     
-    def get_user_language(self, update: Update) -> str:
+    def get_user_language(self, message) -> str:
         """
         Get user's preferred language.
-        Detects from Telegram language code and falls back to stored preference.
+        Detects from message and falls back to stored preference.
         """
-        user_id = update.effective_user.id
+        user_id = message.from_user.id
         
         # Check if we already have language for this user
         if user_id in self.user_languages:
             return self.user_languages[user_id]
         
         # Try to detect from Telegram language code
-        if update.effective_user.language_code:
-            lang_code = update.effective_user.language_code.split('-')[0]
+        if message.from_user.language_code:
+            lang_code = message.from_user.language_code.split('-')[0]
             if lang_code in self.LANGUAGES:
                 self.user_languages[user_id] = lang_code
                 return lang_code
@@ -86,54 +134,63 @@ class LocalizationManager:
             return True
         return False
     
-    def get_text(self, key: str, update: Update = None, user_id: int = None, **kwargs) -> str:
+    def get_text(self, key: str, message=None, user_id: int = None, **kwargs) -> str:
         """
         Get translated text for a key.
-        Either provide update or user_id.
+        Either provide message or user_id.
         """
         # Determine language
-        if update:
-            lang_code = self.get_user_language(update)
+        if message:
+            lang_code = self.get_user_language(message)
         elif user_id:
             lang_code = self.user_languages.get(user_id, self.DEFAULT_LANGUAGE)
         else:
             lang_code = self.DEFAULT_LANGUAGE
         
-        # Get translation
+        # Get translation with fallback to English
         translation = self.translations.get(lang_code, {})
-        text = translation.get(key, self.translations[self.DEFAULT_LANGUAGE].get(key, key))
+        text = translation.get(key)
+        
+        # If not found in selected language, try English
+        if text is None:
+            text = self.translations['en'].get(key)
+            
+        # If still not found, return the key itself
+        if text is None:
+            print(f"⚠️ Missing translation for key: '{key}' in language '{lang_code}'")
+            return key
         
         # Format with kwargs
         if kwargs:
             try:
                 text = text.format(**kwargs)
             except KeyError as e:
-                print(f"Warning: Missing format key {e} for '{key}'")
+                print(f"⚠️ Missing format key {e} for '{key}'")
+            except Exception as e:
+                print(f"⚠️ Error formatting text '{key}': {e}")
         
         return text
     
-    def get_language_keyboard(self, update: Update):
+    def get_language_keyboard(self, message):
         """Create inline keyboard for language selection."""
-        from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-        
-        current_lang = self.get_user_language(update)
-        keyboard = []
+        current_lang = self.get_user_language(message)
+        keyboard = types.InlineKeyboardMarkup()
         row = []
         
         for i, (lang_code, lang_name) in enumerate(self.LANGUAGES.items()):
             # Add indicator for current language
             display_name = f"{lang_name} {'✅' if lang_code == current_lang else ''}"
-            row.append(InlineKeyboardButton(
+            row.append(types.InlineKeyboardButton(
                 display_name,
                 callback_data=f"lang_{lang_code}"
             ))
             
             # 2 buttons per row
             if len(row) == 2 or i == len(self.LANGUAGES) - 1:
-                keyboard.append(row)
+                keyboard.row(*row)
                 row = []
         
-        return InlineKeyboardMarkup(keyboard)
+        return keyboard
     
     def get_language_name(self, lang_code: str, in_own_language: bool = True) -> str:
         """Get language name."""
