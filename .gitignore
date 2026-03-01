@@ -2,6 +2,8 @@
 __*
 graber/downloads/
 graber/logs/
+
+**/*.log
 # Все изображения в любых подпапках
 **/*.jpg
 **/*.png
