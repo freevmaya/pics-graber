@@ -1,0 +1,46 @@
+# ============================================================
+# FILE: locales/es.json
+# TYPE: .JSON
+# ============================================================
+
+{
+    "language_name": "Español",
+    
+    "welcome": "👋 *¡Bienvenido, {name}!*\n\nPuedo ayudarte a encontrar y descargar imágenes de Pinterest.\n\n📝 *Cómo usar:*\n• Envíame cualquier consulta de búsqueda (ej: 'gatos', 'paisajes hermosos')\n• Te mostraré {batch_size} imágenes a la vez\n• Usa los botones para ver más o iniciar una nueva búsqueda\n\n🔍 *¡Pruébalo ahora:* Envíame un término de búsqueda!",
+    
+    "help": "🤖 *Ayuda del Bot de Pinterest*\n\n*Comandos:*\n/start - Iniciar el bot\n/help - Mostrar ayuda\n/new - Nueva búsqueda\n/stop - Detener búsqueda\n/language - Cambiar idioma\n\n*Cómo buscar:*\n¡Simplemente escribe lo que quieres encontrar!\nEjemplos: 'playa al atardecer', 'cachorros lindos', 'arquitectura moderna'\n\n*Características:*\n• Muestra {batch_size} imágenes por lote\n• Guarda resultados en caché para acceso rápido\n• Continúa o detente cuando quieras",
+    
+    "language_prompt": "🌐 *Selecciona tu idioma:*\nElige tu idioma preferido:",
+    "language_changed": "✅ *¡Idioma cambiado a {language}!*",
+    "language_unsupported": "❌ Idioma no soportado. Usando inglés por defecto.",
+    
+    "searching": "🔍 *Buscando:* {query}\n⏳ Por favor espera...",
+    "downloading": "🔍 *Buscando:* {query}\n📥 Descargando imágenes...",
+    "no_images_found": "❌ *No se encontraron imágenes*\nPor favor prueba con otro término.",
+    "no_images_available": "❌ *No hay imágenes disponibles*\nPor favor intenta más tarde.",
+    "no_more_images": "✨ *No hay más imágenes*\n¡Usa /new para iniciar otra búsqueda!",
+    "session_expired": "⚠️ *Sesión expirada*\nPor favor inicia una nueva búsqueda.",
+    
+    "batch_info": "📸 *Lote {current} de {total}*\nMostrando {count} imágenes",
+    "progress": "📊 Progreso: {current}/{total}",
+    "what_next": "*¿Qué te gustaría hacer?*",
+    
+    "next": "▶️ Siguientes {count}",
+    "stop": "⏹️ Parar",
+    "new_search": "🆕 Nueva Búsqueda",
+    "back": "◀️ Atrás",
+    "confirm": "✅ Confirmar",
+    "cancel": "❌ Cancelar",
+    
+    "search_stopped": "⏹️ *Búsqueda detenida*\n¡Usa /new para iniciar otra búsqueda!",
+    "ready_for_search": "🆕 *Listo para nueva búsqueda*\n¡Envíame lo que quieres encontrar!",
+    "error_occurred": "❌ *Ocurrió un error*\nPor favor intenta más tarde.",
+    "file_not_found": "⚠️ Archivo de imagen no encontrado: {filename}",
+    "failed_to_send": "⚠️ Error al enviar imagen: {filename}",
+    "empty_query": "Por favor envía una consulta de búsqueda no vacía.",
+    
+    "lang_en": "Inglés",
+    "lang_ru": "Ruso",
+    "lang_es": "Español",
+    "lang_zh": "Chino"
+}

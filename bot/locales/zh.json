@@ -1,0 +1,46 @@
+# ============================================================
+# FILE: locales/zh.json
+# TYPE: .JSON
+# ============================================================
+
+{
+    "language_name": "中文",
+    
+    "welcome": "👋 *欢迎, {name}!*\n\n我可以帮您在Pinterest上查找和下载图片。\n\n📝 *使用方法:*\n• 发送任何搜索词（例如：'猫'，'美丽风景'）\n• 每次显示{batch_size}张图片\n• 使用按钮查看更多或开始新搜索\n\n🔍 *立即尝试:* 发送搜索词！",
+    
+    "help": "🤖 *Pinterest 机器人帮助*\n\n*命令:*\n/start - 启动机器人\n/help - 显示帮助\n/new - 开始新搜索\n/stop - 停止搜索\n/language - 更改语言\n\n*如何搜索:*\n直接输入您想找的内容！\n示例：'日落海滩'，'可爱小狗'，'现代建筑'\n\n*功能:*\n• 每批显示{batch_size}张图片\n• 缓存结果以便快速访问\n• 随时继续或停止",
+    
+    "language_prompt": "🌐 *选择语言:*\n选择您偏好的语言：",
+    "language_changed": "✅ *语言已更改为 {language}!*",
+    "language_unsupported": "❌ 不支持的语言。默认使用英语。",
+    
+    "searching": "🔍 *搜索:* {query}\n⏳ 请稍候...",
+    "downloading": "🔍 *搜索:* {query}\n📥 正在下载图片...",
+    "no_images_found": "❌ *未找到图片*\n请尝试其他搜索词。",
+    "no_images_available": "❌ *没有可用图片*\n请稍后重试。",
+    "no_more_images": "✨ *没有更多图片*\n使用 /new 开始新搜索！",
+    "session_expired": "⚠️ *会话已过期*\n请开始新搜索。",
+    
+    "batch_info": "📸 *第{current}批，共{total}批*\n显示{count}张图片",
+    "progress": "📊 进度: {current}/{total}",
+    "what_next": "*您想做什么？*",
+    
+    "next": "▶️ 下一批{count}张",
+    "stop": "⏹️ 停止",
+    "new_search": "🆕 新搜索",
+    "back": "◀️ 返回",
+    "confirm": "✅ 确认",
+    "cancel": "❌ 取消",
+    
+    "search_stopped": "⏹️ *搜索已停止*\n使用 /new 开始新搜索！",
+    "ready_for_search": "🆕 *准备新搜索*\n发送您想找的内容！",
+    "error_occurred": "❌ *发生错误*\n请稍后重试。",
+    "file_not_found": "⚠️ 找不到图片文件: {filename}",
+    "failed_to_send": "⚠️ 发送图片失败: {filename}",
+    "empty_query": "请发送非空的搜索词。",
+    
+    "lang_en": "英语",
+    "lang_ru": "俄语",
+    "lang_es": "西班牙语",
+    "lang_zh": "中文"
+}
