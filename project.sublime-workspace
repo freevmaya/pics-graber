@@ -1,0 +1,1188 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"d",
+				"dispose"
+			],
+			[
+				"ve",
+				"Vector3"
+			],
+			[
+				"ran",
+				"random"
+			],
+			[
+				"ite",
+				"items"
+			],
+			[
+				"conta",
+				"contains"
+			],
+			[
+				"state",
+				"stateManager"
+			],
+			[
+				"font",
+				"font-weight"
+			],
+			[
+				"ca",
+				"card-body"
+			],
+			[
+				"js",
+				"json_decode"
+			],
+			[
+				"tr",
+				"trace"
+			],
+			[
+				"tra",
+				"trace"
+			],
+			[
+				"getI",
+				"getItem"
+			],
+			[
+				"User",
+				"UserModel"
+			],
+			[
+				"ele",
+				"elements"
+			],
+			[
+				"incl",
+				"include"
+			],
+			[
+				"tex",
+				"text-align"
+			],
+			[
+				"po",
+				"pointer"
+			],
+			[
+				"for",
+				"forEach"
+			],
+			[
+				"stora",
+				"localStorage"
+			],
+			[
+				"playba",
+				"startPlayback"
+			],
+			[
+				"sc",
+				"score"
+			],
+			[
+				"bac",
+				"background"
+			],
+			[
+				"na",
+				"native"
+			],
+			[
+				"hi",
+				"hide"
+			],
+			[
+				"inn",
+				"innerHeight"
+			],
+			[
+				"fun",
+				"function"
+			],
+			[
+				"he",
+				"height"
+			],
+			[
+				"set",
+				"setTimeout"
+			],
+			[
+				"tog",
+				"toggleClass"
+			],
+			[
+				"btn-outline-s",
+				"btn-outline-success"
+			],
+			[
+				"remove",
+				"removeClass"
+			],
+			[
+				"conf",
+				"Confirm"
+			],
+			[
+				"wrap",
+				"text-wrap"
+			],
+			[
+				"is",
+				"isQuiz"
+			],
+			[
+				"refre",
+				"refreshAccordion"
+			],
+			[
+				"stop",
+				"stopQuestionQuiz"
+			],
+			[
+				"fi",
+				"find"
+			],
+			[
+				"cl",
+				"click"
+			],
+			[
+				"quz",
+				"quiz-block"
+			],
+			[
+				"bt",
+				"btn-secondary"
+			],
+			[
+				"li",
+				"list"
+			],
+			[
+				"getIte",
+				"getItems"
+			],
+			[
+				"cu",
+				"currentPhrase"
+			],
+			[
+				"qu",
+				"quiz"
+			],
+			[
+				"tye",
+				"typeof"
+			],
+			[
+				"remo",
+				"removeClass"
+			],
+			[
+				"ex",
+				"expanded"
+			],
+			[
+				"max",
+				"max-height"
+			],
+			[
+				"wra",
+				"text-wrap"
+			],
+			[
+				"phra",
+				"phrasesList"
+			],
+			[
+				"ph",
+				"phrasesList"
+			],
+			[
+				"over",
+				"overflow-y"
+			],
+			[
+				"pa",
+				"padding-top"
+			],
+			[
+				"ma",
+				"margin"
+			],
+			[
+				"def",
+				"define"
+			],
+			[
+				"direc",
+				"flex-direction"
+			],
+			[
+				"json",
+				"json_decode"
+			],
+			[
+				"get",
+				"getItem"
+			],
+			[
+				"me",
+				"method"
+			],
+			[
+				"requ",
+				"requestNotification"
+			],
+			[
+				"ta",
+				"target"
+			],
+			[
+				"le",
+				"length"
+			],
+			[
+				"ap",
+				"append"
+			],
+			[
+				"Cons",
+				"AppConst"
+			],
+			[
+				"nat",
+				"native-target-both"
+			],
+			[
+				"W",
+				"Wrong"
+			],
+			[
+				"pai",
+				"paid_use"
+			],
+			[
+				"jso",
+				"json_encode()"
+			],
+			[
+				"da",
+				"days"
+			],
+			[
+				"upda",
+				"updatePlaybackState"
+			],
+			[
+				"sa",
+				"saveState"
+			],
+			[
+				"int",
+				"intval()"
+			],
+			[
+				"req",
+				"request"
+			],
+			[
+				"la",
+				"language_code"
+			],
+			[
+				"type",
+				"type_id"
+			],
+			[
+				"setCu",
+				"setCurrentType"
+			],
+			[
+				"con",
+				"concat"
+			],
+			[
+				"direct",
+				"flex-direction"
+			],
+			[
+				"wi",
+				"withTrash"
+			],
+			[
+				"clo",
+				"closest"
+			],
+			[
+				"a",
+				"accordion-header"
+			],
+			[
+				"un",
+				"undefined"
+			],
+			[
+				"current",
+				"currentList"
+			],
+			[
+				"currentT",
+				"currentTarget"
+			],
+			[
+				"text-",
+				"text-align"
+			],
+			[
+				"b",
+				"bind"
+			],
+			[
+				"inner",
+				"innerHeight"
+			],
+			[
+				"coll",
+				"collapse"
+			],
+			[
+				"el",
+				"elements"
+			],
+			[
+				"r",
+				"rgba()"
+			],
+			[
+				"fo",
+				"focus"
+			],
+			[
+				"--co",
+				"--color2_dark"
+			],
+			[
+				"bor",
+				"border-color"
+			],
+			[
+				"back",
+				"background-color"
+			],
+			[
+				"bo",
+				"bold"
+			],
+			[
+				"fle",
+				"flex-direction"
+			],
+			[
+				"app",
+				"appData"
+			],
+			[
+				"sta",
+				"stateManager"
+			],
+			[
+				"p",
+				"pauseBetweenPhrases"
+			],
+			[
+				"ini",
+				"init_params"
+			],
+			[
+				"voi",
+				"voiceType"
+			],
+			[
+				"show",
+				"showAlert"
+			],
+			[
+				"c",
+				"currentPhraseIndex"
+			],
+			[
+				"re",
+				"resolve"
+			],
+			[
+				"te",
+				"text/javascript"
+			],
+			[
+				"use",
+				"user_server"
+			],
+			[
+				"lan",
+				"language"
+			],
+			[
+				"file",
+				"filemtime()"
+			],
+			[
+				"del",
+				"delay"
+			],
+			[
+				"cal",
+				"calc_sign"
+			],
+			[
+				"--",
+				"--light"
+			],
+			[
+				"isPla",
+				"isPlaying"
+			],
+			[
+				"ste",
+				"state"
+			],
+			[
+				"curret",
+				"currentListType"
+			],
+			[
+				"curre",
+				"currentListType"
+			],
+			[
+				"view",
+				"PhrasesListView"
+			],
+			[
+				"t",
+				"token"
+			],
+			[
+				"ra",
+				"rand()"
+			],
+			[
+				"op",
+				"opacity"
+			],
+			[
+				"trans",
+				"transition"
+			],
+			[
+				"saveState",
+				"saveStateToServer"
+			],
+			[
+				"s",
+				"saveState"
+			],
+			[
+				"_S",
+				"$_SESSION\tSESSION['…']"
+			],
+			[
+				"sess",
+				"session_start()"
+			],
+			[
+				"save",
+				"saveState"
+			],
+			[
+				"IN",
+				"INTO"
+			],
+			[
+				"data",
+				"phrasesData"
+			],
+			[
+				"setCur",
+				"setCurrentType"
+			]
+		]
+	},
+	"buffers":
+	[
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"pr",
+				"Pretty JSON: Format JSON"
+			],
+			[
+				"P",
+				"Pretty JSON: Validate"
+			],
+			[
+				"pret",
+				"Pretty JSON: Format JSON"
+			],
+			[
+				"p",
+				"Pretty JSON: Validate"
+			],
+			[
+				"Pretty JSON",
+				"Pretty JSON: Format JSON"
+			],
+			[
+				"Install Package",
+				"Package Control: Install Package"
+			],
+			[
+				"jso",
+				"Set Syntax: JSON"
+			],
+			[
+				"json",
+				"Set Syntax: JSON (PHP)"
+			]
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/D/Projects/pics-graber"
+	],
+	"file_history":
+	[
+		"/D/Projects/tree-jump/index.html",
+		"/D/Projects/tree-jump/scripts/GameState.js",
+		"/D/Projects/tree-jump/scripts/main.js",
+		"/D/Projects/tree-jump/scripts/constants.js",
+		"/D/Projects/tree-jump/scripts/models/Needle.js",
+		"/D/Projects/tree-jump/scripts/audio/SoundManager.js",
+		"/D/Projects/tree-jump/scripts/core/CameraController.js",
+		"/D/Projects/tree-jump/scripts/physics/BallPhysics.js",
+		"/D/Projects/tree-jump/scripts/models/Ball.js",
+		"/D/Projects/tree-jump/scripts/utils/EventEmitter.js",
+		"/D/Projects/tree-jump/scripts/models/Branch.js",
+		"/D/Projects/tree-jump/styles/main.css",
+		"/D/Projects/tree-jump/scripts/models/Background.js",
+		"/D/Projects/tree-jump/scripts/controls/JoystickControl.js",
+		"/D/Projects/tree-jump/scripts/models/Tree.js",
+		"/D/Projects/tree-jump/scripts/utils/TextureLoader.js",
+		"/D/Projects/tree-jump/combine_run.py",
+		"/D/Projects/tree-jump/scripts/core/SceneManager.js",
+		"/D/Projects/tree-jump/scripts/models/Platform.js",
+		"/D/Projects/tree-jump/scripts/models/Crystal.js",
+		"/D/Projects/tree-jump/scripts/models/Skybox.js",
+		"/D/Projects/tree-jump/combined.txt",
+		"/D/Projects/tree-jump/scripts/utils/MaterialUtils.js",
+		"/D/Projects/tree-jump/git-push-requlay.cmd",
+		"/D/Projects/tree-jump/scripts/controls/MouseRotationControl.js",
+		"/D/Projects/tree-jump/combine.bat",
+		"/C/Users/fwadi/AppData/Local/Temp/a6a0f76d-86f7-474c-a720-89fd9bf102e9_Mediatek_Driver_Auto_Installer_v1.1352.zip.2e9/Mediatek Driver Auto Installer v1.1352/ReadMe.txt",
+		"/D/Projects/tree-jump/scripts/core/RendererManager.js",
+		"/D/Projects/tree-jump/scripts/utils/MathUtils.js",
+		"/D/Projects/tree-jump/run.bat",
+		"/C/OpenServer/domains/eng_frases/public/css/video.css",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/engine.php",
+		"/C/OpenServer/domains/eng_frases/public/scripts/add-phrases-dialog.js",
+		"/C/OpenServer/domains/eng_frases/public/scripts/app.js",
+		"/C/OpenServer/domains/eng_frases/public/scripts/vkapp.js",
+		"/C/OpenServer/domains/eng_frases/public/scripts/main.js",
+		"/C/OpenServer/domains/eng_frases/public/scripts/state-manager.js",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/language/ru.php",
+		"/C/OpenServer/domains/eng_frases/public/css/themes.css",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/include/utils.php",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/classes/Main.php",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/classes/Ajax.php",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/models/BaseModel.php",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/templates/index.php",
+		"/C/OpenServer/domains/eng_frases/public/scripts/user-app.js",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/templates/tracker.php",
+		"/C/OpenServer/domains/eng_frases/logs/fdbg.log",
+		"/C/OpenServer/domains/eng_frases/public/css/style.css",
+		"/C/Users/fwadi/AppData/Local/Temp/fz3temp-2/app.js",
+		"/C/Users/fwadi/AppData/Local/Temp/fz3temp-2/engine.php",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/classes/Page.php",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/classes/Vkok.php",
+		"/C/OpenServer/domains/eng_frases/public/scripts/vrecognition.js",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/templates/vkok.php",
+		"/C/Users/fwadi/AppData/Local/Temp/fz3temp-2/errors.log",
+		"/C/OpenServer/domains/eng_frases/logs/errors.log",
+		"/C/OpenServer/domains/eng_frases/public/scripts/error-tracker.js",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/models/PhrasesModel.php",
+		"/C/OpenServer/domains/eng_frases/public/scripts/phrases-list-view.js",
+		"/C/OpenServer/domains/eng_frases/public/scripts/advice-modal.js",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/templates/tg.php",
+		"/C/OpenServer/domains/eng_frases/public/scripts/tg.js",
+		"/C/OpenServer/domains/eng_frases/public/scripts/vkapp-dev.js",
+		"/C/OpenServer/domains/eng_frases/public/scripts/sound.js",
+		"/C/OpenServer/domains/eng_frases/config.php",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/templates/home.php",
+		"/C/Users/fwadi/AppData/Local/Temp/fz3temp-3/errors.log",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/models/IncorrectTranslationsModel.php",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/models/UserPhrasesModel.php",
+		"/C/OpenServer/domains/eng_frases/generator/utilites/PhraseDatabaseExporter.py",
+		"/C/Users/fwadi/Downloads/phrases (3).sql",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/templates/gtag.php",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/models/TypeDescriptionModel.php",
+		"/C/Users/fwadi/AppData/Local/Temp/fz3temp-3/ang.vmaya.ru.conf",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/language/hi.php",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/templates/ya-mertika.php",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/models/UserListsModel.php",
+		"/C/OpenServer/domains/eng_frases/public/scripts/error-logger.js",
+		"/C/OpenServer/domains/eng_frases/generator/classes/EdgeTTSGenerator.py",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/classes/BaseAjax.php",
+		"/C/OpenServer/domains/eng_frases/logs/vk_notification_errors.log",
+		"/C/OpenServer/domains/eng_frases/notification/send_notifications.php",
+		"/C/Users/fwadi/AppData/Local/Temp/fz3temp-2/config.php",
+		"/C/OpenServer/domains/eng_frases/generator/utilites/SpeechGenerator_tts3.py",
+		"/C/OpenServer/domains/eng_frases/generator/utilites/output/import.txt",
+		"/C/OpenServer/domains/eng_frases/public/scripts/speech-synthesizer.js",
+		"/C/OpenServer/domains/eng_frases/generator/utilites/generate.bat",
+		"/C/OpenServer/domains/eng_frases/generator/rename.py",
+		"/C/OpenServer/domains/eng_frases/dev/Дополнение.txt",
+		"/C/OpenServer/domains/eng_frases/public/data/voices/rename.bat",
+		"/C/OpenServer/domains/eng_frases/generator/utilites/output/Present perfect continuous.json",
+		"/C/OpenServer/domains/eng_frases/generator/utilites/output/data/Future in the Past simple.json",
+		"/C/OpenServer/domains/eng_frases/generator/classes/SpeechGenerator.py",
+		"/C/OpenServer/domains/eng_frases/generator/utilites/output/data/Present perfect (passive).json",
+		"/C/Users/fwadi/AppData/Local/Temp/fz3temp-2/fdbg.log",
+		"/C/OpenServer/domains/eng_frases/generator/utilites/output/data/Present perfect.json",
+		"/C/OpenServer/domains/eng_frases/generator/utilites/output/data/Present continuous (passive).json",
+		"/C/OpenServer/domains/eng_frases/generator/utilites/output/phrases.json",
+		"/C/OpenServer/domains/eng_frases/generator/utilites/output/Present continuous.json",
+		"/C/OpenServer/domains/eng_frases/public/scripts/player-controls.js",
+		"/C/Users/fwadi/AppData/Local/Temp/fz3temp-3/fdbg.log",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/include/db/mySQLProvider.php",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/include/db/dataBaseProvider.php",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/include/_edbu2.php",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/include/fdbg.php",
+		"/C/Users/fwadi/AppData/Local/Temp/fz3temp-3/audio-generator.service",
+		"/C/OpenServer/domains/eng_frases/generator/dev/Развертывание сервера генерации речи.txt",
+		"/C/Users/fwadi/AppData/Local/Temp/fz3temp-3/config.php",
+		"/C/OpenServer/domains/eng_frases/english-phrases-server/app.py",
+		"/C/OpenServer/domains/eng_frases/english-phrases-server/OpenAI.py",
+		"/C/Users/fwadi/AppData/Local/Temp/fz3temp-3/english-phrases.service",
+		"/C/OpenServer/domains/eng_frases/english-phrases-server/dev/памятка.txt",
+		"/C/OpenServer/domains/eng_frases/generator/utilites/PhraseDatabaseImporter.py",
+		"/C/OpenServer/domains/eng_frases/generator/utilites/output/input-hi.json",
+		"/C/OpenServer/domains/eng_frases/generator/utilites/output/input-hi-next.json",
+		"/C/Users/fwadi/Downloads/eng_phrases (5).sql",
+		"/C/Users/fwadi/Downloads/eng_phrases (6).sql",
+		"/C/OpenServer/domains/eng_frases/dev/Локализация.txt",
+		"/C/OpenServer/domains/eng_frases/public/scripts/enumerators.js",
+		"/C/OpenServer/domains/eng_frases/public/scripts/microphone-utils.js",
+		"/C/OpenServer/domains/eng_frases/public/scripts/headphone-controls.js",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/templates/message.php",
+		"/C/OpenServer/domains/eng_frases/combine_run.py",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/templates/lang_script.php",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/classes/html.php",
+		"/C/OpenServer/domains/eng_frases/.gitignore",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/templates/confirm.php",
+		"/C/OpenServer/domains/eng_frases/src/Vmaya/language/en.php"
+	],
+	"find":
+	{
+		"height": 27.2
+	},
+	"find_in_files":
+	{
+		"height": 145.0,
+		"where_history":
+		[
+			"D:\\Projects\\tree-jump\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\models,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"D:\\Projects\\english-phrases-server,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"D:\\Projects\\telegram\\eng_phrases_node,<project filters>",
+			"D:\\Projects\\telegram\\eng_phrases_node\\services,<project filters>",
+			"D:\\Projects\\telegram\\eng_phrases_node,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src\\Vmaya\\templates,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\generator,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\generator,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\src,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public\\scripts,<project filters>",
+			"C:\\OpenServer\\domains\\eng_frases\\public,<project filters>",
+			"C:\\OpenServer\\domains\\img2video\\img2video\\src,<project filters>",
+			"C:\\OpenServer\\domains\\img2video\\img2video\\vendor,<project filters>",
+			"C:\\OpenServer\\domains\\img2video\\img2video,<project filters>",
+			"C:\\OpenServer\\domains\\img2video\\img2video\\cron,<project filters>",
+			"C:\\OpenServer\\domains\\img2video\\img2video\\src,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video\\src,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video\\src,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video\\src,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video\\src\\Vmaya,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video\\src,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video\\src\\Vmaya\\classes,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video\\src,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video\\src\\Vmaya,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video\\src,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video\\src\\Vmaya,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video\\src,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video\\src,<project filters>",
+			"C:\\OpenServer\\domains\\dev.vmaya.ru\\img2video\\src\\Vmaya\\classes,<project filters>"
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"enableControls",
+			"MouseRotationControl",
+			"playBounceSound",
+			"bounceCooldown",
+			"play",
+			"bounce",
+			"loadAllSounds",
+			"eventBus",
+			"setupEventListeners",
+			"bounceCooldown",
+			"init()",
+			"playStandardAudio",
+			"playWebAudio",
+			"NEEDLE_COLOR_VARIATION",
+			"addNeedles",
+			"rotationSpeed",
+			"createEnvironment",
+			"platfor",
+			"speed",
+			"createVariableRadiusTube",
+			"setPosition",
+			"checkTreePlatformsCollision",
+			"position.",
+			"position.set",
+			"position",
+			"getPointOnTrunk",
+			"createPlatforms",
+			"calcDista",
+			"getPointOnTrunk",
+			"calcDistance",
+			"maxVelocity",
+			"MAX_VELOCITY",
+			"platformGeometry",
+			"geometr",
+			"MeshStandardMaterial",
+			"createFallbackBackground",
+			"MeshStandardMaterial",
+			"light",
+			"bounceCounterElement",
+			"bounce-counter",
+			"normal",
+			"useCache",
+			"addWireframe",
+			"wireframe",
+			"wireMaterial",
+			"transparent",
+			"Branch",
+			"transparent",
+			"texture",
+			"distance",
+			"Branch",
+			"getPointOnTrunk",
+			"points",
+			"material",
+			"barkTexture",
+			"TREE_SEGMENTS",
+			"TREE_CURVE_STRENGTH",
+			"points",
+			"curveStrength",
+			"TREE_CURVE_STRENGTH",
+			"loadTexture",
+			"calcDistance",
+			"BRANCH_SEGMENTS",
+			"curveDirection",
+			"init()",
+			"textureLoader",
+			"init()",
+			"mesh",
+			"this.cameraController",
+			"CameraController",
+			"this.background",
+			"createBackground",
+			"fog",
+			"this.background",
+			"createBackground",
+			"cameraController",
+			"camera",
+			"background",
+			"localY",
+			"this.branches",
+			"localY",
+			"platformMesh",
+			"createBranchesUnderPlatforms",
+			"baseRadius",
+			"endRadius",
+			"createSmallTwigs",
+			"boxGeometry",
+			"dispose",
+			"this.crystal",
+			"createGameObjects",
+			"this.ball",
+			"reset",
+			"calcDistance",
+			"platformTypes",
+			"getHighestPlatform",
+			"createGameObjects",
+			"createCrystal",
+			"crystal",
+			"resetGame",
+			"checkTreePlatformsCollision",
+			"animate",
+			"createGameObjects",
+			"checkTreePlatformsCollision",
+			"PLATFORM_RADIUS",
+			"this.material",
+			"updateTexture",
+			"loadTexture",
+			"textureLoader",
+			"loadTexture",
+			"textureLoader",
+			"setPosition",
+			"getPosition",
+			"mesh.position",
+			"setPosition",
+			"ball",
+			"this.ball",
+			"create",
+			"Radius",
+			"light",
+			"btn-",
+			"header",
+			".pause-modal",
+			"pause-modal",
+			"pauseModal",
+			"baseBounceY",
+			"platformData",
+			"platformBottom",
+			"THREE"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+			"TRUNK_SEGMENTS",
+			"TRUNK_CURVE_STRENGTH",
+			"mesh",
+			"_victoryCallbacks",
+			"_gameOverCallbacks",
+			"targetRotation",
+			"checkTentionDelay",
+			"stopQuestionQuiz",
+			"stateQuestionQuiz",
+			"desk-block",
+			"deskBlock",
+			" #",
+			"#",
+			"AppConst.directions",
+			"indexInMode",
+			"Lang",
+			"target",
+			"app.route('/phrases",
+			"app.route('phrases",
+			"var(--color2_dark)",
+			"var(--color1_light)",
+			"var(--color1_light_down)",
+			"var(--color1_midle)",
+			"var(--color1_dark)",
+			"var(--color1_dark_down)",
+			"bg-form",
+			"text-target",
+			"playBackgrounAudio",
+			"bg-theme-gradient",
+			"bg-gradient",
+			"saveState",
+			"config.use_server",
+			"sendPhrase",
+			"tg",
+			"tracer.error",
+			"loadedAudios",
+			"appData.pageScrollTimerId",
+			"appData.timeoutId",
+			"<?=$v?>",
+			"trace_error(",
+			"_db_charset",
+			"CHARSET",
+			"_dbpassword",
+			"_dbuser",
+			"_dbname_default",
+			"_dbhost",
+			"native_text",
+			"target_text",
+			"appData.missOne",
+			"setSession",
+			"btn btn-sm btn-outline-primary edit-phrase-btn",
+			"tracer.log(",
+			"user_phrases",
+			"fileUrl",
+			"this.success",
+			"this.recognition",
+			"appData.currentPhrase",
+			"appData.currentPhraseList",
+			"currentPhraseList",
+			"FormatType",
+			"setCurrentPhraseIndex",
+			"type_id",
+			"native_text",
+			"target_text",
+			"/",
+			"native",
+			"target",
+			"native-target",
+			"target-native",
+			"target-source",
+			"source-target",
+			"stateManager.isPaused",
+			"stateManager.isPlaying",
+			"AppConst",
+			"Const.charTime",
+			"'pmenu_state'",
+			"'leo_model'",
+			"generators['leo']",
+			"generators['kling']",
+			"generators['mj']",
+			"",
+			"->defaultModel",
+			"\"num_images\": 1",
+			"MidjourneyApi",
+			"dl_task",
+			"$dl_tasks",
+			"listeners"
+		],
+		"reverse": false,
+		"scrollbar_highlights": true,
+		"show_context": false,
+		"use_buffer2": true,
+		"use_gitignore": false,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"sheets":
+			[
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 27.2
+	},
+	"input":
+	{
+		"height": 73.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.diff_views":
+	{
+		"height": 36.0,
+		"history":
+		[
+		]
+	},
+	"output.find_results":
+	{
+		"height": 224.0,
+		"history":
+		[
+		]
+	},
+	"output.unsaved_changes":
+	{
+		"height": 107.0,
+		"history":
+		[
+		]
+	},
+	"pinned_build_system": "",
+	"project": "project.sublime-project",
+	"replace":
+	{
+		"height": 51.2
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 380.0
+	},
+	"select_symbol":
+	{
+		"height": 392.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 592.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 293.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}

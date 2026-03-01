@@ -1,0 +1,945 @@
+{
+  "otaData": {
+    "deltas": {}
+  },
+  "inContextTranslation": false,
+  "initialReduxState": {
+    "adminUser": null,
+    "articles": {},
+    "billing": {
+      "businessInformationForm": {},
+      "billingInformationForm": {},
+      "autoFillQPBillingChecked": true
+    },
+    "boards": {},
+    "boardsections": {},
+    "businessAccess": {
+      "people": {
+        "data": {},
+        "loading": false
+      },
+      "invitesOrRequests": {
+        "invites": {
+          "people": {},
+          "partner": {}
+        },
+        "requests": {
+          "partner": {}
+        },
+        "type": "PENDING",
+        "loading": false
+      },
+      "partners": {
+        "data": {},
+        "loading": false,
+        "isSelectedPartnerAssociatedWithAoaa": false
+      },
+      "employers": {
+        "list": null,
+        "isLoading": false,
+        "error": null
+      },
+      "adAccounts": {
+        "data": {},
+        "loading": false,
+        "businessIdsAssociatedWithAoaas": []
+      },
+      "businessMetrics": {
+        "data": {},
+        "loading": false
+      },
+      "actingUser": {
+        "data": null,
+        "loading": false,
+        "error": null
+      },
+      "table": {
+        "visibleData": [],
+        "page": 1,
+        "totalCount": 0,
+        "limit": 10,
+        "sortDirection": "ASCENDING",
+        "searchTerm": ""
+      },
+      "history": {
+        "data": {},
+        "loading": false,
+        "error": null,
+        "dateRange": {
+          "startDate": "2026-02-21T00:00:00.000Z",
+          "endDate": "2026-02-27T00:00:00.000Z"
+        }
+      },
+      "inviteOrRequestData": {
+        "invites": {},
+        "requests": {},
+        "loading": false
+      },
+      "pending": {
+        "people": {},
+        "partner": {},
+        "assets": {},
+        "type": [
+          "PENDING",
+          "EXPIRED"
+        ],
+        "loading": false
+      },
+      "aoaaRequests": {
+        "requests": {},
+        "loading": false
+      },
+      "assetGroups": {
+        "assetGroups": {},
+        "owners": {
+          "adAccountOwners": [],
+          "profileOwners": [],
+          "aoaaIds": []
+        },
+        "loading": false,
+        "adAccountsLoading": false,
+        "profilesLoading": false,
+        "catalogsLoading": false,
+        "employeesLoading": false,
+        "systemUsersLoading": false,
+        "ownersLoading": false,
+        "partnersLoading": false,
+        "adAccountsTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "searchTerm": "",
+          "startIndex": 1
+        },
+        "profilesTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "searchTerm": "",
+          "startIndex": 1
+        },
+        "catalogsTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "searchTerm": "",
+          "startIndex": 1
+        },
+        "employeesTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "searchTerm": "",
+          "startIndex": 1
+        },
+        "systemUsersTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "searchTerm": "",
+          "startIndex": 1
+        },
+        "partnersTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "searchTerm": "",
+          "startIndex": 1
+        }
+      },
+      "profiles": {
+        "data": {},
+        "loading": false,
+        "error": null
+      },
+      "viewerInvites": {
+        "loading": false,
+        "data": []
+      },
+      "viewerIsProfileOwnerOrProfileManager": {},
+      "viewerBusinessHierarchyInvites": {
+        "loading": false,
+        "error": null,
+        "data": []
+      },
+      "navigation": {
+        "users": {
+          "collapse": false
+        },
+        "accounts": {
+          "collapse": false
+        },
+        "isLoading": false
+      },
+      "newRelationshipAssetAssignmentFlow": {
+        "invites": {
+          "businessRole": "",
+          "businesses": []
+        },
+        "selectedPartners": {
+          "selectedPartnerBusinessIds": [],
+          "selectedCountries": [],
+          "searchValue": "",
+          "totalSelected": 0
+        },
+        "selectedAssets": {
+          "adAccounts": {
+            "resourceIdToRoles": {},
+            "roleToNumberOfAssets": {}
+          },
+          "catalogs": {
+            "resourceIdToRoles": {},
+            "roleToNumberOfAssets": {}
+          },
+          "profiles": {
+            "resourceIdToRoles": {},
+            "roleToNumberOfAssets": {}
+          }
+        },
+        "selectedRmnAssets": {
+          "audiences": {
+            "resourceIdToRoles": {},
+            "resourceIdToNames": {}
+          },
+          "conversionSegments": {
+            "resourceIdToRoles": {},
+            "resourceIdToNames": {}
+          },
+          "catalogs": {
+            "resourceIdToRoles": {},
+            "resourceIdToNames": {}
+          }
+        },
+        "requestedAssets": {
+          "adAccounts": {
+            "resourceIdToRoles": {}
+          },
+          "catalogs": {
+            "resourceIdToRoles": {}
+          },
+          "profiles": {
+            "resourceIdToRoles": {}
+          }
+        },
+        "loading": false,
+        "selectedApps": {
+          "resourceIdToRoles": {},
+          "roleToNumberOfAssets": {}
+        }
+      },
+      "invoiceManagement": {
+        "data": {},
+        "loading": false,
+        "error": null,
+        "invoiceTabVisibility": "PROGRESS"
+      },
+      "businessHierarchy": {
+        "adAccounts": {
+          "data": [],
+          "table": {
+            "page": 1,
+            "totalCount": 0,
+            "limit": 10,
+            "sortDirection": "ASCENDING",
+            "searchTerm": "",
+            "startIndex": 1
+          },
+          "loading": false
+        },
+        "catalogs": {
+          "data": [],
+          "table": {
+            "page": 1,
+            "totalCount": 0,
+            "limit": 10,
+            "sortDirection": "ASCENDING",
+            "searchTerm": "",
+            "startIndex": 1
+          },
+          "loading": false
+        },
+        "assetGroups": {
+          "data": [],
+          "table": {
+            "page": 1,
+            "totalCount": 0,
+            "limit": 10,
+            "sortDirection": "ASCENDING",
+            "searchTerm": "",
+            "startIndex": 1
+          },
+          "loading": false
+        },
+        "businessHierarchyBusinessMembers": {
+          "data": [],
+          "table": {
+            "page": 1,
+            "totalCount": 0,
+            "limit": 10,
+            "sortDirection": "ASCENDING",
+            "searchTerm": "",
+            "startIndex": 1
+          },
+          "loading": false
+        },
+        "profiles": {
+          "data": [],
+          "table": {
+            "page": 1,
+            "totalCount": 0,
+            "limit": 10,
+            "sortDirection": "ASCENDING",
+            "searchTerm": "",
+            "startIndex": 1
+          },
+          "loading": false
+        },
+        "employees": {
+          "data": [],
+          "table": {
+            "page": 1,
+            "totalCount": 0,
+            "limit": 10,
+            "sortDirection": "ASCENDING",
+            "searchTerm": "",
+            "startIndex": 1
+          },
+          "loading": false
+        },
+        "partners": {
+          "data": [],
+          "table": {
+            "page": 1,
+            "totalCount": 0,
+            "limit": 10,
+            "sortDirection": "ASCENDING",
+            "searchTerm": "",
+            "startIndex": 1
+          },
+          "loading": false
+        },
+        "pending": {
+          "childBusinesses": {
+            "data": [],
+            "table": {
+              "page": 1,
+              "totalCount": 0,
+              "limit": 10,
+              "sortDirection": "ASCENDING",
+              "searchTerm": "",
+              "startIndex": 1
+            }
+          },
+          "organizationManagers": {
+            "data": [],
+            "table": {
+              "page": 1,
+              "totalCount": 0,
+              "limit": 10,
+              "sortDirection": "ASCENDING",
+              "searchTerm": "",
+              "startIndex": 1
+            }
+          },
+          "loading": false
+        }
+      },
+      "tags": {
+        "tags": {},
+        "loading": false,
+        "adAccountsTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "searchTerm": "",
+          "startIndex": 1
+        },
+        "adAccountsLoading": false,
+        "selectedAdAccounts": [],
+        "overlayOpen": false
+      },
+      "audienceSharing": {
+        "audiences": {
+          "sharedAudiences": [],
+          "receivedAudiences": [],
+          "ownedAudiences": [],
+          "sharedAudiencesLoading": false,
+          "receivedAudiencesLoading": false,
+          "ownedAudiencesLoading": false,
+          "error": null
+        },
+        "sharedAccounts": {
+          "accounts": {},
+          "loading": false,
+          "error": null
+        }
+      },
+      "updatePermissions": {
+        "loading": false
+      },
+      "employees": {
+        "employees": {},
+        "invites": {},
+        "loading": false,
+        "invitesLoading": false,
+        "adAccountsTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "sortBy": "name",
+          "searchTerm": "",
+          "startIndex": 1
+        },
+        "adAccountsLoading": false,
+        "profilesTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "sortBy": "name",
+          "searchTerm": "",
+          "startIndex": 1
+        },
+        "profilesLoading": false,
+        "assetGroupsTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "searchTerm": "",
+          "startIndex": 1
+        },
+        "assetGroupsLoading": false,
+        "catalogsTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "searchTerm": "",
+          "startIndex": 1
+        },
+        "catalogsLoading": false,
+        "assetRolesLoading": false
+      },
+      "catalogs": {
+        "data": {},
+        "sharedData": {},
+        "invites": {},
+        "loading": false,
+        "employeesTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "searchTerm": "",
+          "startIndex": 1
+        },
+        "employeesLoading": false,
+        "partnersTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "searchTerm": "",
+          "startIndex": 1
+        },
+        "partnersLoading": false,
+        "catalogOwners": {},
+        "catalogOwnersLoading": false
+      },
+      "systemUsers": {
+        "data": [],
+        "systemUsers": {},
+        "adAccounts": [],
+        "assetGroups": [],
+        "catalogs": [],
+        "systemApps": [],
+        "profiles": [],
+        "loading": false,
+        "adAccountLoading": false,
+        "selectedSystemId": "",
+        "profilesLoading": false,
+        "appsLoading": false,
+        "catalogsLoading": false,
+        "assetGroupsLoading": false,
+        "table": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "sortBy": "full_name",
+          "searchTerm": "",
+          "startIndex": 0
+        },
+        "adAccountTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "sortBy": "name",
+          "searchTerm": "",
+          "startIndex": 0
+        },
+        "profilesTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "sortBy": "name",
+          "searchTerm": "",
+          "startIndex": 0
+        },
+        "appsTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "sortBy": "name",
+          "searchTerm": "",
+          "startIndex": 0
+        },
+        "catalogsTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "sortBy": "name",
+          "searchTerm": "",
+          "startIndex": 0
+        },
+        "assetGroupsTable": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "sortBy": "name",
+          "searchTerm": "",
+          "startIndex": 0
+        }
+      },
+      "apps": {
+        "data": [],
+        "loading": false,
+        "refreshToken": {
+          "loading": false
+        }
+      },
+      "conversionSegments": {
+        "data": [],
+        "sharedData": [],
+        "loading": false,
+        "adAccountLoading": false,
+        "adAccounts": [],
+        "conversionTypeLoading": false,
+        "conversionTypes": [],
+        "mainPanelLoading": false,
+        "selectedConversionId": "",
+        "table": {
+          "page": 1,
+          "totalCount": 0,
+          "limit": 10,
+          "sortDirection": "ASCENDING",
+          "sortBy": "name",
+          "searchTerm": "",
+          "startIndex": 1
+        }
+      },
+      "rmnHub": {
+        "partners": {
+          "data": {},
+          "loading": false,
+          "error": null,
+          "totalCount": 0
+        },
+        "partnerOverviewMetrics": {
+          "isLoading": false,
+          "data": {
+            "rows": null,
+            "summary": [],
+            "count": 0
+          },
+          "error": null
+        },
+        "topRiserDecliners": {
+          "isLoading": false,
+          "data": [
+            {
+              "topRisers": [],
+              "topDecliners": [],
+              "metric": ""
+            },
+            {
+              "topRisers": [],
+              "topDecliners": [],
+              "metric": ""
+            }
+          ],
+          "error": null
+        }
+      },
+      "contracts": {
+        "data": [],
+        "loading": false,
+        "rmnBillingContracts": [],
+        "rmnBillingContractsLoading": false,
+        "pdfLoading": false,
+        "acceptLoading": false
+      }
+    },
+    "businessNux": {
+      "currentStep": {
+        "index": 0,
+        "canProceed": false
+      },
+      "businessGoals": [],
+      "businessName": "",
+      "businessVertical": "",
+      "numberEmployees": "",
+      "hasWebsite": "",
+      "website": "",
+      "country": "",
+      "locale": "",
+      "advertisingIntent": null,
+      "accountType": "",
+      "agencyRole": "",
+      "agencyClients": "",
+      "agencyContent": "",
+      "agencyService": "",
+      "agencyServiceOther": "",
+      "firstName": "",
+      "lastName": "",
+      "fullName": "",
+      "email": "",
+      "countryCode": "",
+      "phoneNumber": "",
+      "worksWithAgency": null,
+      "leadId": "",
+      "whatsAppConsent": false,
+      "calendlyUpsellEligible": false,
+      "shouldShowCalendlyModal": false,
+      "businessSettingsUtmsEnabled": true
+    },
+    "underageConfirmation": {
+      "isUnderageConfirmationModalVisible": false
+    },
+    "changeBoardFromToast": {
+      "shouldOpenModal": false
+    },
+    "contactRequests": {},
+    "createBoardUpsell": {},
+    "currentUserTracker": {
+      "isAuthenticated": 0,
+      "downloadedPinsCount": 0,
+      "downloadLimitReached": false,
+      "visitedUnauthPages": [],
+      "closeupPins": [],
+      "completedSearches": [],
+      "clickthroughPins": [],
+      "savedPins": [],
+      "isQUS": 0,
+      "revisitationState": {
+        "ts": 1772338575285,
+        "sessionTimestamps": [
+          1772338575285
+        ]
+      },
+      "daysSinceLastRevisitation": 0,
+      "country": "",
+      "referrer": "",
+      "unauthId": "",
+      "userAgent": {
+        "browserName": "",
+        "browserType": null,
+        "browserVersion": "",
+        "canUseNativeApp": false,
+        "isTablet": false,
+        "isMobile": false,
+        "platform": "",
+        "platformVersion": [
+          0,
+          0,
+          0
+        ],
+        "osName": null,
+        "raw": ""
+      },
+      "region": "",
+      "channel": "",
+      "iab": "",
+      "deviceType": "desktop",
+      "storageAccessAllowed": 0,
+      "isIAB": false,
+      "landingPageViewType": 202,
+      "revisitationCount": 0,
+      "currentPageViewType": 202,
+      "dwebPinImageClickCount": 0
+    },
+    "desktopStories": {},
+    "didItData": {},
+    "experiences": {},
+    "experiencesMulti": {},
+    "explore": {},
+    "feeds": {},
+    "flashlight": {},
+    "guidance": {
+      "adsNotifications": {
+        "data": [],
+        "error": null,
+        "isLoading": false,
+        "isLoaded": false,
+        "lastCallParams": null
+      }
+    },
+    "homefeedTabUI": {
+      "activeTabBoardId": "",
+      "activeTabIndex": 0
+    },
+    "inbox": {},
+    "invites": {},
+    "marketingPlan": {
+      "canProceed": true,
+      "topBusinessGoal": "",
+      "dailyAdsBudget": "",
+      "weeklyAddToCarts": 0,
+      "weeklyLeads": 0,
+      "weeklyCheckouts": 0,
+      "hasFeed": false,
+      "defaultCatalogId": null,
+      "defaultFeedProfileId": null,
+      "shouldShowGoalsStep": true,
+      "isSurveyOpen": false,
+      "isCalendlyModalOpen": false,
+      "marketingPlanName": "",
+      "marketingPlanSuggestion": [],
+      "showCustomBudgetField": false,
+      "showCustomBudgetFieldError": false
+    },
+    "modules": {},
+    "mostRecentBoard": null,
+    "notifications": {},
+    "pinbuilder": {
+      "assets": [],
+      "batchDraftCreationIds": [],
+      "batchEditModeFields": {
+        "dirtyFields": [],
+        "description": "",
+        "link": "",
+        "title": "",
+        "board": null,
+        "descriptionError": null,
+        "linkError": null,
+        "titleError": null
+      },
+      "closeupImageSignature": null,
+      "createdPinIds": [],
+      "entryPoint": null,
+      "fonts": [],
+      "isBatchEditMode": false,
+      "layoutMode": 0,
+      "pinDraftIds": [],
+      "pinDraftIdUploadStatusMap": {},
+      "pinDrafts": {},
+      "pinEditorPinDraft": null,
+      "pinItems": {},
+      "pinTags": {},
+      "selectedPinDraftIds": [],
+      "showDisabledPinCreationBanner": false,
+      "showFeedbackModal": false,
+      "storyPinItemBlocks": {},
+      "storyPinItems": {},
+      "taggedObjects": {}
+    },
+    "pinbuilderMobile": {},
+    "pinNavContext": null,
+    "pins": {},
+    "productFilters": {},
+    "promotionsUpsell": {
+      "promoId": "",
+      "startDate": "",
+      "endDate": "",
+      "startTime": "00:00",
+      "endTime": "",
+      "title": "",
+      "templateValues": {},
+      "showPromoCode": false,
+      "modalStep": "CREATE",
+      "isLoading": true,
+      "errorMessages": {},
+      "activeCampaigns": [],
+      "selectedCampaignIds": [],
+      "allCampaignIds": [],
+      "campaignIdToAdGroupMap": {},
+      "isRowOpen": {},
+      "promotionsEmailRedirect": ""
+    },
+    "reactions": {},
+    "resources": {},
+    "scheduledPins": [],
+    "search": {
+      "animated": false,
+      "currentSearch": {
+        "query": "",
+        "scope": "pins"
+      },
+      "queries": {},
+      "productFilters": {},
+      "recentSearches": [],
+      "recentPersonalSearches": [],
+      "recommendedSearches": [],
+      "typeaheadCache": {},
+      "pins": {},
+      "visualSearches": {}
+    },
+    "session": {
+      "browser": "Chrome",
+      "browserType": 1,
+      "browserVersion": "120.0.0",
+      "canUseNativeApp": false,
+      "debug": false,
+      "facebookToken": "",
+      "inviteCode": "",
+      "isAuthenticated": false,
+      "isDataSaver": false,
+      "isMobile": false,
+      "isPaidTraffic": false,
+      "isSocialBot": false,
+      "isTablet": false,
+      "origin": "https://www.pinterest.com",
+      "requestIdentifier": "1434290511213357",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "userAgentPlatform": "other",
+      "userId": "",
+      "stage": "prod",
+      "seoDebug": false
+    },
+    "settings": {},
+    "stories": {},
+    "storyPinData": {},
+    "todayarticles": {},
+    "todayArticles": {},
+    "topics": {},
+    "triedits": {},
+    "ui": {
+      "mainComponent": {
+        "current": null,
+        "locationToErrorMap": {}
+      },
+      "nuxSelectedInterestImages": {
+        "images": []
+      },
+      "nuxSelectedPinImages": {
+        "images": []
+      },
+      "nuxProgress": {
+        "step": "welcome"
+      },
+      "postRepinMoreIdeasUpsell": {
+        "recentSaves": [],
+        "recentUpsell": {}
+      }
+    },
+    "users": {
+      "": {
+        "unauth_id": "1e03c295ef07474ca54a21e019d7da23",
+        "ip_country": "RU",
+        "ip_region": "CHE",
+        "id": ""
+      }
+    },
+    "verifiedMerchants": {
+      "vmpBannerLastDismissedAt": {},
+      "vmpWelcomeBannerDismissCount": {},
+      "vmpCelebrationBannerDismissed": {}
+    },
+    "upsell": {
+      "latestL1Vertical": null,
+      "pinClickRelatedPinsCount": 0,
+      "upsellReason": "",
+      "pinViewCount": 0,
+      "pinSaveCount": 0,
+      "showBanner": false,
+      "showSaveModal": false,
+      "attributionLabel": "",
+      "pinId": "",
+      "showScrollDownUpsell": true,
+      "showSaveEducationPopover": false,
+      "saveEducationPopoverEverShown": false,
+      "showRelatedPinsGradientUpsell": false,
+      "relatedPinsGradientUpsellEverShown": false,
+      "showReplyToSenderSheet": false,
+      "replyToSenderSheetEverShown": false,
+      "clickCloseUp": false,
+      "clickContextMenuSaveButton": false,
+      "clickContextMenuDownloadButton": false,
+      "clickFollowButton": false,
+      "followIsIdeaPin": false,
+      "clickCloseUpContextMenuSaveButton": false,
+      "clickFollowingButton": false,
+      "clickFollowersButton": false,
+      "clickCommentComposerUpsell": false,
+      "clickPinLinkUpsell": false,
+      "clickPinLinkCount": 0,
+      "clickRelatedPinOpenLinkUpsell": false,
+      "uniqueNavigationalPagesSeen": [],
+      "navigationalPagesUpsellSeen": false,
+      "navigationalContainerPage": "navigationalContainerPage_unspecified_container",
+      "modal": {
+        "isShown": false
+      },
+      "socialPinLandingInviter": null,
+      "socialPinLandingContainerPage": "socialPinLandingContainerPage_unspecified_container",
+      "socialPinLandingModalShown": false,
+      "socialPinLandingModalDismissed": false,
+      "mWeb": {
+        "pinSaveCount": 0,
+        "pinViewCount": 0
+      },
+      "mWebSignupModal": {
+        "modal": {
+          "isShown": false
+        },
+        "scrollControllerHasDisplayed": false,
+        "upsellEligibleNavigationCount": 0,
+        "isUnauthSharingModalsShown": false,
+        "lastShownTime": null,
+        "timesShownForSessionCount": 0,
+        "modalHasShown": false
+      },
+      "upsellDismissCount": 0,
+      "engagementScore": {
+        "PES": 0,
+        "NUS": 0,
+        "conversionIntentLevel": "unknown",
+        "lastCalculated": 0
+      },
+      "appUpsells": {
+        "learningUpsell": {
+          "isShown": false
+        },
+        "floatingUpsell": {
+          "shouldShow": true,
+          "isDismissed": false
+        },
+        "iabAppUpsell": {
+          "isShown": false,
+          "appUpsellType": "other",
+          "isBlocking": false
+        },
+        "appUpsellDismissCount": 0
+      }
+    }
+  },
+  "isAppShell": false,
+  "pwaContext": {
+    "pwaType": "unknown",
+    "twaType": null
+  }
+}
