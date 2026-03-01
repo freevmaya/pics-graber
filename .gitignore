@@ -1,6 +1,7 @@
 .env
 __*
 graber/downloads/
+logs/
 # Все изображения в любых подпапках
 **/*.jpg
 **/*.png
