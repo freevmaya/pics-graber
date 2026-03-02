@@ -819,7 +819,6 @@ class PinterestBot:
                         sent_msg = self.bot.send_video(
                             user_id,
                             media_file,
-                            caption=caption,
                             width=item.get('width') if item.get('width') and item['width'] > 0 else None,
                             height=item.get('height') if item.get('height') and item['height'] > 0 else None,
                             duration=int(item.get('duration')) if item.get('duration') and item['duration'] > 0 else None,
@@ -831,7 +830,6 @@ class PinterestBot:
                         sent_msg = self.bot.send_photo(
                             user_id,
                             media_file,
-                            caption=caption,
                             reply_markup=action_keyboard
                         )
                 
