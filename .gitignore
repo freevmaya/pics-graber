@@ -3,6 +3,7 @@ __*
 downloads/
 logs/
 temp_downloads/
+dev/
 
 **/*.log
 # Все изображения в любых подпапках
