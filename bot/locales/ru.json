@@ -51,7 +51,7 @@
     "media_duration_label": "Длительность",
     "media_caption_label": "Описание",
     
-    "show_complete": "Показываю все",
+    "show_complete": "Отправьте новый запрос если вас не удовлетворил результат.",
     "more_available": "Еще {count} доступно",
     
     "lang_en": "English",
