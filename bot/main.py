@@ -7,6 +7,7 @@
 
 import sys
 import os
+import telebot
 from pathlib import Path
 
 # Add current directory to path
@@ -75,7 +76,7 @@ TEMP_DOWNLOAD_DIR=temp_downloads
     
     try:
         # Create and run bot
-        bot = PinterestBot()
+        bot = PinterestBot(telebot.TeleBot(Config.BOT_TOKEN))
         bot.run()
     except KeyboardInterrupt:
         print("\n\n👋 Bot stopped by user")

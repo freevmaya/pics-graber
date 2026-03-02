@@ -1,48 +1,61 @@
 {
     "language_name": "English",
-    
-    "welcome": "👋 <b>Welcome, {name}!</b>\n\nI can help you find and download images from Pinterest.\n\n📝 <b>How to use:</b>\n• Send me any search query (e.g., 'cats', 'beautiful landscapes')\n• I'll show you {batch_size} images at a time\n• Use the buttons to see more or start a new search\n\n🔍 <b>Try it now:</b> Send me a search term!",
-    
-    "help": "🤖 <b>Pinterest Image Bot Help</b>\n\n<b>Commands:</b>\n/start - Start the bot\n/help - Show this help\n/new - Start a new search\n/stop - Stop current search\n/language - Change language\n\n<b>How to search:</b>\nSimply type what you want to find!\nExamples: 'sunset beach', 'cute puppies', 'modern architecture'\n\n<b>Features:</b>\n• Shows {batch_size} images per batch\n• Caches results for faster access\n• Continue or stop anytime",
-    
-    "language_prompt": "🌐 <b>Select your language:</b>\nChoose your preferred language:",
-    "language_changed": "✅ <b>Language changed to {language}!</b>",
-    "language_unsupported": "❌ Language not supported. Defaulting to English.",
-    
+    "welcome": "👋 <b>Welcome, {name}!</b>\n\nI can help you find and download images and videos from Pinterest.\n\n📝 <b>How to use:</b>\n• Send me any search query (e.g., 'cats', 'beautiful landscapes')\n• I'll show you {batch_size} items at a time\n• Use the buttons to download, share, or remove each item\n\n🔍 <b>Try it now:</b> Send me a search term!",
+    "help": "🤖 <b>Pinterest Bot Help</b>\n\n<b>Commands:</b>\n/start - Start the bot\n/help - Show this help\n/language - Change language\n/new - Start a new search\n/stop - Stop current search\n\n<b>How to search:</b>\nSimply type what you want to find!\n\n<b>Features:</b>\n• Shows {batch_size} items per batch\n• Download, share, and remove buttons for each item\n• Video support (if available)\n• Preview images to save bandwidth",
+    "language_prompt": "🌐 <b>Select language:</b>",
+    "language_changed": "✅ <b>Language changed!</b>\nNow using: {language}",
+    "language_unsupported": "❌ Language not supported.",
     "searching": "🔍 <b>Searching for:</b> {query}\n⏳ Please wait...",
-    "downloading": "🔍 <b>Searching for:</b> {query}\n📥 Downloading images...",
-    "no_images_found": "❌ <b>No images found</b>\nPlease try a different search term.",
-    "no_images_available": "❌ <b>No images available</b>\nPlease try again later.",
-    "no_more_images": "✨ <b>No more images</b>\nUse /new to start another search!",
+    "downloading": "🔍 <b>Searching for:</b> {query}\n📥 Downloading images and videos...",
+    "no_images_found": "❌ <b>No items found</b>\nPlease try a different search term.",
+    "no_images_available": "❌ <b>No items available</b>\nPlease try again later.",
+    "no_more_images": "✨ <b>No more items</b>\nUse /new to start another search!",
     "session_expired": "⚠️ <b>Session expired</b>\nPlease start a new search.",
-    
-    "batch_info": "📸 <b>Batch {current} of {total}</b>\nShowing {count} images",
+    "batch_info": "📸 <b>Batch {current} of {total}</b>\nShowing {count} items",
     "progress": "📊 Progress: {current}/{total}",
     "what_next": "<b>What would you like to do?</b>",
-    "more_available": "📌 {count} more available",
-    
     "next": "▶️ Next {count}",
     "stop": "⏹️ Stop",
     "new_search": "🆕 New Search",
-    "back": "◀️ Back",
-    "confirm": "✅ Confirm",
-    "cancel": "❌ Cancel",
-    
     "search_stopped": "⏹️ <b>Search stopped</b>\nUse /new to start another search!",
     "ready_for_search": "🆕 <b>Ready for new search</b>\nSend me what you'd like to find!",
     "error_occurred": "❌ <b>An error occurred</b>\nPlease try again later.",
-    "file_not_found": "⚠️ Image file not found: {filename}",
-    "failed_to_send": "⚠️ Failed to send image: {filename}",
+    "file_not_found": "⚠️ File not found: {filename}",
+    "file_not_found_server": "❌ File not found on server",
+    "failed_to_send": "⚠️ Failed to send: {filename}",
     "empty_query": "Please send a non-empty search query.",
     
-    "video_found": "🎥 Found {count} videos",
-    "image_found": "🖼️ Found {count} images",
-    "video_info": "📹 {resolution} • {duration}",
-    "file_size": "💾 {size}",
-    "large_file": "⚠️ File too large, sending as document",
+    "download_button": "📥 Download",
+    "share_button": "📤 Share",
+    "remove_button": "🗑️ Remove",
+    "actions_for": "<b>Actions for:</b> {filename}",
+    "downloaded_file": "📥 <b>Downloaded:</b> {filename}",
+    "file_sent": "✅ File sent!",
+    "error_downloading": "❌ Error downloading file",
+    
+    "choose_chat_button": "📤 Choose chat",
+    "share_inline_text": "Check out this image: {filename}",
+    "share_instructions": "<b>Share file:</b> {filename}\n\n1. Click the button below\n2. Select a chat\n3. Send the message",
+    "select_chat": "📤 Select a chat to share",
+    "error_sharing": "❌ Error preparing share",
+    
+    "message_deleted": "🗑️ Message deleted",
+    "message_removed": "✅ Message removed",
+    "error_deleting": "❌ Error deleting message",
+    
+    "media_info_title": "Media Information",
+    "media_type_label": "Type",
+    "media_file_label": "File",
+    "media_size_label": "Size",
+    "media_resolution_label": "Resolution",
+    "media_duration_label": "Duration",
+    "media_caption_label": "Caption",
+    
+    "show_complete": "Showing complete",
+    "more_available": "{count} more available",
     
     "lang_en": "English",
-    "lang_ru": "Russian",
-    "lang_es": "Spanish",
-    "lang_zh": "Chinese"
+    "lang_ru": "Русский",
+    "lang_es": "Español",
+    "lang_zh": "中文"
 }

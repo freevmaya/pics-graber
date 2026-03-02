@@ -104,13 +104,58 @@ class LocalizationManager:
             "lang_es": "Spanish",
             "lang_zh": "Chinese"
         }
+
+    def _get_user_id_from_message(self, message) -> Optional[int]:
+        """
+        Extract user ID from various message/callback structures.
+        Works with:
+        - Regular messages (message.from_user)
+        - Callback queries (message.from_user or message.message.chat)
+        - Channel posts (message.sender_chat)
+        - Messages from bot (fallback to chat ID)
+        """
+        try:
+            # Try to get from from_user first (most common case)
+            if hasattr(message, 'from_user') and message.from_user and not message.from_user.is_bot:
+                return message.from_user.id
+            
+            # Try callback query structure
+            if hasattr(message, 'message') and message.message:
+                if hasattr(message.message, 'from_user') and message.message.from_user:
+                    return message.message.from_user.id
+                if hasattr(message.message, 'chat') and message.message.chat:
+                    return message.message.chat.id
+            
+            # Try to get chat ID (for messages without user)
+            if hasattr(message, 'chat') and message.chat:
+                return message.chat.id
+            
+            # Try to get from message.chat for callback queries
+            if hasattr(message, 'message') and hasattr(message.message, 'chat'):
+                return message.message.chat.id
+            
+            # Try sender_chat (for channel posts)
+            if hasattr(message, 'sender_chat') and message.sender_chat:
+                return message.sender_chat.id
+            
+            # Last resort: try to get any ID attribute
+            for attr in ['user_id', 'id', 'chat_id']:
+                if hasattr(message, attr):
+                    return getattr(message, attr)
+            
+            logger.error(f"Could not extract user ID from message: {type(message)}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error extracting user ID: {e}")
+            return None
     
     def get_user_language(self, message) -> str:
         """
         Get user's preferred language.
         Detects from message and falls back to stored preference.
         """
-        user_id = message.from_user.id
+        user_id = self._get_user_id_from_message(message)
         
         # Check if we already have language for this user
         if user_id in self.user_languages:

@@ -1,48 +1,61 @@
 {
     "language_name": "Español",
-    
-    "welcome": "👋 <b>¡Bienvenido, {name}!</b>\n\nPuedo ayudarte a encontrar y descargar imágenes de Pinterest.\n\n📝 <b>Cómo usar:</b>\n• Envíame cualquier consulta de búsqueda (ej: 'gatos', 'paisajes hermosos')\n• Te mostraré {batch_size} imágenes a la vez\n• Usa los botones para ver más o iniciar una nueva búsqueda\n\n🔍 <b>¡Pruébalo ahora:</b> Envíame un término de búsqueda!",
-    
-    "help": "🤖 <b>Ayuda del Bot de Pinterest</b>\n\n<b>Comandos:</b>\n/start - Iniciar el bot\n/help - Mostrar ayuda\n/new - Nueva búsqueda\n/stop - Detener búsqueda\n/language - Cambiar idioma\n\n<b>Cómo buscar:</b>\n¡Simplemente escribe lo que quieres encontrar!\nEjemplos: 'playa al atardecer', 'cachorros lindos', 'arquitectura moderna'\n\n<b>Características:</b>\n• Muestra {batch_size} imágenes por lote\n• Guarda resultados en caché para acceso rápido\n• Continúa o detente cuando quieras",
-    
-    "language_prompt": "🌐 <b>Selecciona tu idioma:</b>\nElige tu idioma preferido:",
-    "language_changed": "✅ <b>¡Idioma cambiado a {language}!</b>",
-    "language_unsupported": "❌ Idioma no soportado. Usando inglés por defecto.",
-    
+    "welcome": "👋 <b>¡Bienvenido, {name}!</b>\n\nPuedo ayudarte a encontrar y descargar imágenes y videos de Pinterest.\n\n📝 <b>Cómo usar:</b>\n• Envíame cualquier consulta de búsqueda (ej. 'gatos', 'paisajes hermosos')\n• Te mostraré {batch_size} elementos a la vez\n• Usa los botones para descargar, compartir o eliminar cada elemento\n\n🔍 <b>Pruébalo ahora:</b> ¡Envíame un término de búsqueda!",
+    "help": "🤖 <b>Ayuda del Bot de Pinterest</b>\n\n<b>Comandos:</b>\n/start - Iniciar el bot\n/help - Mostrar esta ayuda\n/language - Cambiar idioma\n/new - Iniciar nueva búsqueda\n/stop - Detener búsqueda actual\n\n<b>Cómo buscar:</b>\n¡Simplemente escribe lo que quieres encontrar!\n\n<b>Características:</b>\n• Muestra {batch_size} elementos por lote\n• Botones de descarga, compartir y eliminar para cada elemento\n• Soporte de video (si está disponible)\n• Vista previa de imágenes para ahorrar ancho de banda",
+    "language_prompt": "🌐 <b>Seleccionar idioma:</b>",
+    "language_changed": "✅ <b>¡Idioma cambiado!</b>\nAhora usando: {language}",
+    "language_unsupported": "❌ Idioma no soportado.",
     "searching": "🔍 <b>Buscando:</b> {query}\n⏳ Por favor espera...",
-    "downloading": "🔍 <b>Buscando:</b> {query}\n📥 Descargando imágenes...",
-    "no_images_found": "❌ <b>No se encontraron imágenes</b>\nPor favor prueba con otro término.",
-    "no_images_available": "❌ <b>No hay imágenes disponibles</b>\nPor favor intenta más tarde.",
-    "no_more_images": "✨ <b>No hay más imágenes</b>\n¡Usa /new para iniciar otra búsqueda!",
+    "downloading": "🔍 <b>Buscando:</b> {query}\n📥 Descargando imágenes y videos...",
+    "no_images_found": "❌ <b>No se encontraron elementos</b>\nPrueba con otro término de búsqueda.",
+    "no_images_available": "❌ <b>No hay elementos disponibles</b>\nPor favor intenta más tarde.",
+    "no_more_images": "✨ <b>No hay más elementos</b>\n¡Usa /new para iniciar otra búsqueda!",
     "session_expired": "⚠️ <b>Sesión expirada</b>\nPor favor inicia una nueva búsqueda.",
-    
-    "batch_info": "📸 <b>Lote {current} de {total}</b>\nMostrando {count} imágenes",
+    "batch_info": "📸 <b>Lote {current} de {total}</b>\nMostrando {count} elementos",
     "progress": "📊 Progreso: {current}/{total}",
     "what_next": "<b>¿Qué te gustaría hacer?</b>",
-    "more_available": "📌 {count} más disponibles",
-    
     "next": "▶️ Siguientes {count}",
-    "stop": "⏹️ Parar",
+    "stop": "⏹️ Detener",
     "new_search": "🆕 Nueva Búsqueda",
-    "back": "◀️ Atrás",
-    "confirm": "✅ Confirmar",
-    "cancel": "❌ Cancelar",
-    
     "search_stopped": "⏹️ <b>Búsqueda detenida</b>\n¡Usa /new para iniciar otra búsqueda!",
     "ready_for_search": "🆕 <b>Listo para nueva búsqueda</b>\n¡Envíame lo que quieres encontrar!",
     "error_occurred": "❌ <b>Ocurrió un error</b>\nPor favor intenta más tarde.",
-    "file_not_found": "⚠️ Archivo de imagen no encontrado: {filename}",
-    "failed_to_send": "⚠️ Error al enviar imagen: {filename}",
+    "file_not_found": "⚠️ Archivo no encontrado: {filename}",
+    "file_not_found_server": "❌ Archivo no encontrado en el servidor",
+    "failed_to_send": "⚠️ Error al enviar: {filename}",
     "empty_query": "Por favor envía una consulta de búsqueda no vacía.",
     
-    "video_found": "🎥 Encontrados {count} videos",
-    "image_found": "🖼️ Encontradas {count} imágenes",
-    "video_info": "📹 {resolution} • {duration}",
-    "file_size": "💾 {size}",
-    "large_file": "⚠️ Archivo demasiado grande, enviando como documento",
+    "download_button": "📥 Descargar",
+    "share_button": "📤 Compartir",
+    "remove_button": "🗑️ Eliminar",
+    "actions_for": "<b>Acciones para:</b> {filename}",
+    "downloaded_file": "📥 <b>Descargado:</b> {filename}",
+    "file_sent": "✅ ¡Archivo enviado!",
+    "error_downloading": "❌ Error al descargar archivo",
     
-    "lang_en": "Inglés",
-    "lang_ru": "Ruso",
+    "choose_chat_button": "📤 Elegir chat",
+    "share_inline_text": "Mira esta imagen: {filename}",
+    "share_instructions": "<b>Compartir archivo:</b> {filename}\n\n1. Haz clic en el botón de abajo\n2. Selecciona un chat\n3. Envía el mensaje",
+    "select_chat": "📤 Selecciona un chat para compartir",
+    "error_sharing": "❌ Error al preparar para compartir",
+    
+    "message_deleted": "🗑️ Mensaje eliminado",
+    "message_removed": "✅ Mensaje eliminado",
+    "error_deleting": "❌ Error al eliminar mensaje",
+    
+    "media_info_title": "Información del Archivo",
+    "media_type_label": "Tipo",
+    "media_file_label": "Archivo",
+    "media_size_label": "Tamaño",
+    "media_resolution_label": "Resolución",
+    "media_duration_label": "Duración",
+    "media_caption_label": "Descripción",
+    
+    "show_complete": "Mostrando todo",
+    "more_available": "{count} más disponibles",
+    
+    "lang_en": "English",
+    "lang_ru": "Русский",
     "lang_es": "Español",
-    "lang_zh": "Chino"
+    "lang_zh": "中文"
 }
