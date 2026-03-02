@@ -23,7 +23,7 @@ class LocalizationManager:
     }
     
     # Default language
-    DEFAULT_LANGUAGE = 'en'
+    DEFAULT_LANGUAGE = 'ru'
     
     def __init__(self, locales_dir: str = "locales"):
         """Initialize localization manager."""
