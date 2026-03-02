@@ -1,8 +1,8 @@
 .env
 __*
-graber/downloads/
-graber/logs/
-bot/temp_downloads/
+downloads/
+logs/
+temp_downloads/
 
 **/*.log
 # Все изображения в любых подпапках
