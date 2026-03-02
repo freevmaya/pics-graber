@@ -783,27 +783,6 @@ class PinterestBot:
                 
                 caption = ' | '.join(caption_parts) if caption_parts else None
                 
-                # Send the media based on type
-                with open(display_file, 'rb') as media_file:
-                    if file_type == 'video':
-                        # Send as video
-                        sent_msg = self.bot.send_video(
-                            user_id,
-                            media_file,
-                            caption=caption,
-                            width=item.get('width') if item.get('width') and item['width'] > 0 else None,
-                            height=item.get('height') if item.get('height') and item['height'] > 0 else None,
-                            duration=int(item.get('duration')) if item.get('duration') and item['duration'] > 0 else None,
-                            supports_streaming=True
-                        )
-                    else:
-                        # Send as photo (using preview)
-                        sent_msg = self.bot.send_photo(
-                            user_id,
-                            media_file,
-                            caption=caption
-                        )
-                
                 # Create action buttons for this specific media
                 media_id = item['id']
                 original_path = original_file
@@ -833,18 +812,42 @@ class PinterestBot:
                 # Add buttons to keyboard (all in one row)
                 action_keyboard.add(download_btn, share_btn, remove_btn)
                 
+                # Send the media based on type
+                with open(display_file, 'rb') as media_file:
+                    if file_type == 'video':
+                        # Send as video
+                        sent_msg = self.bot.send_video(
+                            user_id,
+                            media_file,
+                            caption=caption,
+                            width=item.get('width') if item.get('width') and item['width'] > 0 else None,
+                            height=item.get('height') if item.get('height') and item['height'] > 0 else None,
+                            duration=int(item.get('duration')) if item.get('duration') and item['duration'] > 0 else None,
+                            supports_streaming=True,
+                            reply_markup=action_keyboard
+                        )
+                    else:
+                        # Send as photo (using preview)
+                        sent_msg = self.bot.send_photo(
+                            user_id,
+                            media_file,
+                            caption=caption,
+                            reply_markup=action_keyboard
+                        )
+                
+                '''
                 # Send action buttons as a separate message
                 self.bot.send_message(
                     user_id,
                     self.get_text('actions_for', message, filename=file_name),
                     parse_mode='HTML',
                     reply_markup=action_keyboard
-                )
+                )'''
                 
                 # Store message info for later reference (for remove button)
                 self.store_message_info(user_id, sent_msg.message_id, media_id, original_path)
                 
-                time.sleep(0.5)  # Delay to avoid flooding
+                time.sleep(0.1)  # Delay to avoid flooding
                 
             except Exception as e:
                 logger.error(f"Error sending media: {e}")
