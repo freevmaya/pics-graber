@@ -13,6 +13,13 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from config import Config
 
+# Setup logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
 class DatabaseManager:
     """Manages database operations for caching."""
     
@@ -81,11 +88,9 @@ class DatabaseManager:
                 image_type VARCHAR(20) DEFAULT 'image',
                 caption TEXT,
                 downloaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                is_sent BOOLEAN DEFAULT FALSE,
                 sent_at TIMESTAMP NULL,
                 FOREIGN KEY (search_cache_id) REFERENCES search_cache(id) ON DELETE CASCADE,
                 INDEX idx_search_cache (search_cache_id),
-                INDEX idx_is_sent (is_sent),
                 UNIQUE KEY unique_image_per_search (search_cache_id, image_url(255))
             ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
         """)
@@ -233,31 +238,20 @@ class DatabaseManager:
         """Get unsent images for pagination."""
         cursor = self.connection.cursor(dictionary=True)
 
-        where = 'search_cache_id = %s AND is_sent = FALSE'
+        where = 'search_cache_id = %s'
         if not Config.INCLUDE_VIDEO:
             where += " AND image_type = 'image'"
 
-        cursor.execute(f"""
+        query = f"""
             SELECT * FROM downloaded_images 
             WHERE {where}
             ORDER BY id
             LIMIT %s OFFSET %s
-        """, (search_cache_id, limit, offset))
+        """
+        logger.info(f"get_unsent_images {query}, {search_cache_id}, {limit}, {offset}")
+
+        cursor.execute(query, (search_cache_id, limit, offset))
         return cursor.fetchall()
-    
-    def mark_images_as_sent(self, image_ids: List[int]) -> None:
-        """Mark images as sent."""
-        if not image_ids:
-            return
-        
-        cursor = self.connection.cursor()
-        format_strings = ','.join(['%s'] * len(image_ids))
-        cursor.execute(f"""
-            UPDATE downloaded_images 
-            SET is_sent = TRUE, sent_at = CURRENT_TIMESTAMP
-            WHERE id IN ({format_strings})
-        """, tuple(image_ids))
-        self.connection.commit()
     
     def get_user_session(self, user_id: int) -> Optional[Dict]:
         """Get user session data."""

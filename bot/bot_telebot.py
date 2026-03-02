@@ -453,9 +453,6 @@ class PinterestBot:
             parse_mode='HTML'
         )
         
-        # Send media items
-        sent_ids = []
-        
         for item in media_items:
             try:
                 # Determine which file to send (preview for images if available)
@@ -552,8 +549,7 @@ class PinterestBot:
                                 caption=f"🖼️ Image (large) - {caption}" if caption else "🖼️ Image (large)",
                                 visible_file_name=item['file_name']
                             )
-                
-                sent_ids.append(item['id'])
+
                 time.sleep(0.5)  # Delay to avoid flooding
                 
             except Exception as e:
@@ -562,10 +558,6 @@ class PinterestBot:
                     user_id,
                     self.get_text('failed_to_send', message, filename=item.get('file_name', 'unknown'))
                 )
-        
-        # Mark successfully sent images
-        if sent_ids:
-            self.db.mark_images_as_sent(sent_ids)
         
         # Get updated session
         session = self.db.get_user_session(user_id)
@@ -586,29 +578,21 @@ class PinterestBot:
                     self.get_text('next', message, count=next_count),
                     callback_data=self.CALLBACK_NEXT
                 ))
-        
-        # Send navigation message
-        current = session['current_offset'] if session else len(media_items)
-        total = session['total_images'] if session else len(media_items)
-        
-        progress_text = self.get_text('progress', message, current=current, total=total)
-        
-        # Add remaining count if there are more
-        if session and current < total:
-            remaining = total - current
-            progress_text += f"\n{self.get_text('more_available', message, count=remaining)}"
-        
-        nav_msg = (
-            f"{self.get_text('what_next', message)}\n\n"
-            f"{progress_text}"
-        )
-        
-        self.bot.send_message(
-            user_id,
-            nav_msg,
-            parse_mode='HTML',
-            reply_markup=keyboard
-        )
+                
+                progress_text = self.get_text('progress', message, current=current_offset, total=total_items)
+                progress_text += f"\n{self.get_text('more_available', message, count=remaining)}"
+            
+                nav_msg = (
+                    f"{self.get_text('what_next', message)}\n\n"
+                    f"{progress_text}"
+                )
+                
+                self.bot.send_message(
+                    user_id,
+                    nav_msg,
+                    parse_mode='HTML',
+                    reply_markup=keyboard
+                )
     
     def show_media_info(self, user_id: int, media_id: int, message):
         """Show detailed information about a media item."""
