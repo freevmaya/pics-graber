@@ -5,6 +5,8 @@ logs/
 temp_downloads/
 dev/
 
+combined.*
+
 **/*.log
 # Все изображения в любых подпапках
 **/*.jpg
