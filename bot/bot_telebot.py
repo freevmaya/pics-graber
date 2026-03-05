@@ -1072,8 +1072,8 @@ class PinterestBot:
                     if attempt == max_attempts - 1:
                         # Final attempt failed, send error message
                         base_url = os.getenv('BASE_URL', 'http://localhost:8000')
-                        file_name = item.get('file_name', 'unknown')
-                        download_link = f"{base_url}/download/{item.get('id', '0')}/{file_name}"
+                        relative_path = get_last_n_parts(item.get('local_path', 'unknown'))
+                        download_link = f"{base_url}/{relative_path}"
                         
                         self.bot.send_message(
                             user_id,
