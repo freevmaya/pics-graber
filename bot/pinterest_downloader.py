@@ -58,7 +58,7 @@ class PinterestDownloader:
         cmd = [
             'pinterest-dl',
             'search',
-            query,
+            f'"{query}"',
             '-o', str(download_path),
             '--num', str(limit)
         ]
