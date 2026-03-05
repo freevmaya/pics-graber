@@ -63,9 +63,9 @@ class PinterestDownloader:
             '--num', str(limit)
         ]
         
-        # Add video flag if needed
-        if include_videos:
-            cmd.append('--video')
+        # Add video flag if needed Пока убрал загрузки видео, потому что незагружаются видео в telegram почему-то
+        # if include_videos:
+        #    cmd.append('--video')
         
         cmd_str = ' '.join(cmd)
         logger.info(f"Executing search command: {cmd_str}")
