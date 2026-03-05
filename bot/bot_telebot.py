@@ -1,5 +1,5 @@
 # ============================================================
-# FILE: bot_telebot.py (FIXED - ALL URLS GO TO GALLERY-DL)
+# FILE: bot_telebot.py (UPDATED WITH FILE_ID SUPPORT)
 # ============================================================
 
 """Telegram bot using pyTelegramBotAPI with video support, action buttons and URL downloads."""
@@ -364,20 +364,26 @@ class PinterestBot:
             
             with open(file_path, 'rb') as f:
                 if file_type == 'video':
-                    self.bot.send_video(
+                    sent_msg = self.bot.send_video(
                         user_id,
                         f,
                         caption=self.get_text('downloaded_file', call.message, filename=file_name),
                         parse_mode='HTML'
                     )
                 else:
-                    self.bot.send_document(
+                    sent_msg = self.bot.send_document(
                         user_id,
                         f,
                         caption=self.get_text('downloaded_file', call.message, filename=file_name),
                         visible_file_name=file_name,
                         parse_mode='HTML'
                     )
+            
+            # Save the file_id from the sent message
+            if file_type == 'video' and sent_msg.video:
+                self.db.update_image_file_id(media_id, sent_msg.video.file_id)
+            elif not file_type == 'video' and sent_msg.document:
+                self.db.update_image_file_id(media_id, sent_msg.document.file_id)
             
             # Acknowledge callback
             self.bot.answer_callback_query(
@@ -893,42 +899,15 @@ class PinterestBot:
             video_sent = False
             max_attempts = 2
             
+            # Check if we already have a file_id for this media
+            existing_file_id = item.get('file_id')
+            
             for attempt in range(max_attempts):
                 try:
                     # Determine which file to send (preview for display)
                     file_type = item.get('image_type', 'image')
-                    
-                    # For display, use preview if available (to save bandwidth)
-                    display_file = None
-                    if file_type == 'image' and Config.PREVIEW_ENABLED and item.get('preview_path'):
-                        preview_path = item['preview_path']
-                        if Path(preview_path).exists():
-                            display_file = preview_path
-                            logger.info(f"Sending preview: {preview_path}")
-                    
-                    # Fallback to original if preview missing or not available
-                    if not display_file:
-                        display_file = item['local_path']
-                    
-                    # Get original file path for download/share
-                    original_file = item['local_path']
+                    media_id = item['id']
                     file_name = item['file_name']
-                    
-                    if not display_file or not Path(display_file).exists():
-                        # If file not found, send download link
-                        base_url = os.getenv('BASE_URL', 'http://localhost:8000')
-                        download_link = f"{base_url}/download/{item['id']}/{file_name}"
-                        
-                        self.bot.send_message(
-                            user_id,
-                            self.get_text('file_not_found_with_link', message, 
-                                         filename=file_name, link=download_link),
-                            parse_mode='HTML'
-                        )
-                        break
-                    
-                    # Get file size for caption
-                    file_size = os.path.getsize(display_file) if Path(display_file).exists() else 0
                     
                     # Create caption with metadata
                     caption_parts = []
@@ -948,19 +927,14 @@ class PinterestBot:
                         # Add image info
                         if item.get('width') and item.get('height') and item['width'] > 0 and item['height'] > 0:
                             caption_parts.append(f"🖼️ {item['width']}x{item['height']}")
-                        if display_file != original_file:
-                            caption_parts.append("🔍 Preview")
                     
-                    # Add file size
-                    if file_size > 0:
-                        caption_parts.append(f"💾 {self.format_file_size(file_size)}")
+                    # Add file size if available
+                    if item.get('file_size'):
+                        caption_parts.append(f"💾 {self.format_file_size(item['file_size'])}")
                     
                     caption = ' | '.join(caption_parts) if caption_parts else None
                     
                     # Create action buttons for this specific media
-                    media_id = item['id']
-                    
-                    # Create inline keyboard with action buttons
                     action_keyboard = types.InlineKeyboardMarkup(row_width=3)
                     
                     # Download button - sends the original file
@@ -984,6 +958,64 @@ class PinterestBot:
                     # Add buttons to keyboard (all in one row)
                     action_keyboard.add(download_btn, share_btn, remove_btn)
                     
+                    # Try to send using file_id first (if available)
+                    if existing_file_id and attempt == 0:
+                        try:
+                            logger.info(f"Attempting to send using file_id for media {media_id}")
+                            
+                            if file_type == 'video':
+                                sent_msg = self.bot.send_video(
+                                    user_id,
+                                    existing_file_id,
+                                    caption=caption,
+                                    reply_markup=action_keyboard,
+                                    timeout=60
+                                )
+                            else:
+                                sent_msg = self.bot.send_photo(
+                                    user_id,
+                                    existing_file_id,
+                                    caption=caption,
+                                    reply_markup=action_keyboard,
+                                    timeout=30
+                                )
+                            
+                            video_sent = True
+                            logger.info(f"Successfully sent using file_id for media {media_id}")
+                            break
+                            
+                        except Exception as e:
+                            logger.warning(f"Failed to send using file_id for media {media_id}: {e}")
+                            # If file_id fails, fall back to sending from file
+                            existing_file_id = None
+                            continue
+                    
+                    # If no file_id or file_id failed, send from file
+                    # For display, use preview if available (to save bandwidth)
+                    display_file = None
+                    if file_type == 'image' and Config.PREVIEW_ENABLED and item.get('preview_path'):
+                        preview_path = item['preview_path']
+                        if Path(preview_path).exists():
+                            display_file = preview_path
+                            logger.info(f"Sending preview: {preview_path}")
+                    
+                    # Fallback to original if preview missing or not available
+                    if not display_file:
+                        display_file = item['local_path']
+                    
+                    if not display_file or not Path(display_file).exists():
+                        # If file not found, send download link
+                        base_url = os.getenv('BASE_URL', 'http://localhost:8000')
+                        download_link = f"{base_url}/download/{item['id']}/{file_name}"
+                        
+                        self.bot.send_message(
+                            user_id,
+                            self.get_text('file_not_found_with_link', message, 
+                                         filename=file_name, link=download_link),
+                            parse_mode='HTML'
+                        )
+                        break
+                    
                     # Send the media based on type
                     if file_type == 'video':
                         try:
@@ -993,7 +1025,7 @@ class PinterestBot:
                                 raise IOError(f"File not readable: {display_file}")
                             
                             # Log file details for debugging
-                            logger.info(f"Attempting to send video: {display_file}, size: {file_size} bytes")
+                            logger.info(f"Attempting to send video: {display_file}, size: {item.get('file_size', 0)} bytes")
                             
                             # Open file and send with increased timeout
                             with open(display_file, 'rb') as media_file:
@@ -1016,6 +1048,11 @@ class PinterestBot:
                             video_sent = True
                             logger.info(f"Successfully sent video: {display_file}")
                             
+                            # Save the file_id for future use
+                            if sent_msg and sent_msg.video:
+                                self.db.update_image_file_id(media_id, sent_msg.video.file_id)
+                                logger.info(f"Saved file_id for video {media_id}")
+                            
                         except Exception as e:
                             logger.error(f"Error sending video (attempt {attempt + 1}/{max_attempts}): {e}")
                             
@@ -1034,6 +1071,11 @@ class PinterestBot:
                                         )
                                     video_sent = True
                                     logger.info(f"Successfully sent video as document: {display_file}")
+                                    
+                                    # Save file_id from document
+                                    if sent_msg and sent_msg.document:
+                                        self.db.update_image_file_id(media_id, sent_msg.document.file_id)
+                                        
                                 except Exception as doc_error:
                                     logger.error(f"Error sending as document: {doc_error}")
                                     # Send just the link as last resort
@@ -1061,10 +1103,19 @@ class PinterestBot:
                                 timeout=30
                             )
                         video_sent = True
+                        
+                        # Save the file_id for future use
+                        if sent_msg and sent_msg.photo:
+                            # For photos, we can use the file_id of the largest size
+                            # Usually the last one in the list is the largest
+                            if sent_msg.photo:
+                                file_id = sent_msg.photo[-1].file_id
+                                self.db.update_image_file_id(media_id, file_id)
+                                logger.info(f"Saved file_id for image {media_id}")
                     
                     if video_sent:
                         # Store message info for later reference (for remove button)
-                        self.store_message_info(user_id, sent_msg.message_id, media_id, original_file)
+                        self.store_message_info(user_id, sent_msg.message_id, media_id, item.get('local_path', ''))
                         break  # Exit retry loop on success
                     
                 except Exception as e:
@@ -1155,6 +1206,10 @@ class PinterestBot:
         if media.get('caption'):
             info_text += f"\n{self.get_text('media_caption_label', message)}: {media['caption'][:200]}"
         
+        # Add file_id info if available (for debugging)
+        if media.get('file_id'):
+            info_text += f"\n\n✅ Cached (ready for fast sending)"
+        
         self.bot.send_message(
             user_id,
             info_text,
@@ -1173,6 +1228,7 @@ class PinterestBot:
         if Config.INCLUDE_VIDEO:
             print(f"Video support: ✅ Enabled")
         print(f"URL support: ✅ Enabled (gallery-dl)")
+        print(f"File ID caching: ✅ Enabled")
         print("="*50 + "\n")
         
         # Cleanup old downloads periodically

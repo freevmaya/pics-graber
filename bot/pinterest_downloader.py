@@ -53,12 +53,14 @@ class PinterestDownloader:
         safe_query = re.sub(r'[^\w\-_]', '_', query)[:30]
         download_path = self.download_dir / f"search_{query_hash}"
         download_path.mkdir(exist_ok=True)
+
+        query_q = '"' + query + '"'
         
         # Build command for search
         cmd = [
             'pinterest-dl',
             'search',
-            f'"{query}"',
+            query_q,
             '-o', str(download_path),
             '--num', str(limit)
         ]

@@ -1,5 +1,5 @@
 # ============================================================
-# FILE: database.py (UPDATED WITH CONNECTION LOSS HANDLING)
+# FILE: database.py (UPDATED WITH FILE_ID SUPPORT)
 # ============================================================
 
 """Database management module with language support and connection recovery."""
@@ -165,7 +165,7 @@ class DatabaseManager:
                 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
             """)
             
-            # Downloaded images cache
+            # Downloaded images cache - ADDED file_id column
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS downloaded_images (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -179,10 +179,12 @@ class DatabaseManager:
                     height INT,
                     image_type VARCHAR(20) DEFAULT 'image',
                     caption TEXT,
+                    file_id VARCHAR(500),  -- Telegram file_id for cached sending
                     downloaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     sent_at TIMESTAMP NULL,
                     FOREIGN KEY (search_cache_id) REFERENCES search_cache(id) ON DELETE CASCADE,
                     INDEX idx_search_cache (search_cache_id),
+                    INDEX idx_file_id (file_id),  -- Index for faster lookups
                     UNIQUE KEY unique_image_per_search (search_cache_id, image_url(255))
                 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
             """)
@@ -301,8 +303,6 @@ class DatabaseManager:
             return cursor.lastrowid
         
         return self.execute_with_reconnect(_create_search_cache, commit=True, cursor_kwargs={})
-
-    
     
     def save_images_to_cache(self, search_cache_id: int, images: List[Dict]) -> int:
         """Save downloaded images to cache with preview paths."""
@@ -315,15 +315,16 @@ class DatabaseManager:
                 cursor.execute("""
                     INSERT INTO downloaded_images 
                     (search_cache_id, image_url, local_path, preview_path, file_name, file_size, 
-                     width, height, image_type, caption)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     width, height, image_type, caption, file_id)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON DUPLICATE KEY UPDATE
                     local_path = VALUES(local_path),
                     preview_path = VALUES(preview_path),
                     file_size = VALUES(file_size),
                     width = VALUES(width),
                     height = VALUES(height),
-                    caption = VALUES(caption)
+                    caption = VALUES(caption),
+                    file_id = COALESCE(VALUES(file_id), file_id)  -- Don't overwrite existing file_id with NULL
                 """, (
                     search_cache_id,
                     img.get('url', ''),
@@ -334,7 +335,8 @@ class DatabaseManager:
                     img.get('width'),
                     img.get('height'),
                     img.get('type', 'image'),
-                    img.get('caption')
+                    img.get('caption'),
+                    img.get('file_id')  # NEW: save file_id if provided
                 ))
                 saved_count += 1
             except Error as e:
@@ -354,6 +356,19 @@ class DatabaseManager:
         logger.info(f"Updated total_images for cache {search_cache_id} to {saved_count}")
         self.connection.commit()
         return saved_count
+    
+    def update_image_file_id(self, image_id: int, file_id: str) -> None:
+        """Update file_id for an image after successful sending."""
+        def _update_image_file_id(cursor):
+            cursor.execute("""
+                UPDATE downloaded_images 
+                SET file_id = %s
+                WHERE id = %s
+            """, (file_id, image_id))
+            return True
+        
+        self.execute_with_reconnect(_update_image_file_id, commit=True, cursor_kwargs={})
+        logger.info(f"Updated file_id for image {image_id}: {file_id[:20]}...")
     
     def get_unsent_images(self, search_cache_id: int, limit: int, offset: int = 0) -> List[Dict]:
         """Get unsent images for pagination."""

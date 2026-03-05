@@ -8,6 +8,7 @@
 import sys
 import os
 import telebot
+from telebot import apihelper
 from pathlib import Path
 
 # Add current directory to path
@@ -16,6 +17,11 @@ sys.path.insert(0, str(Path(__file__).parent))
 # Используем telebot версию
 from bot_telebot import PinterestBot
 from config import Config
+
+# Увеличиваем таймауты для всех запросов
+apihelper.READ_TIMEOUT = 60  # 60 секунд на чтение
+apihelper.CONNECT_TIMEOUT = 60  # 60 секунд на подключение
+
 
 def check_requirements():
     """Check if all requirements are met."""
