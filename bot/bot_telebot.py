@@ -1,8 +1,8 @@
 # ============================================================
-# FILE: bot_telebot.py (COMPLETE - WITH LOCALIZATION FIXES)
+# FILE: bot_telebot.py (FIXED - ALL URLS GO TO GALLERY-DL)
 # ============================================================
 
-"""Telegram bot using pyTelegramBotAPI with video support and action buttons."""
+"""Telegram bot using pyTelegramBotAPI with video support, action buttons and URL downloads."""
 
 import telebot
 from telebot import types
@@ -13,10 +13,12 @@ import time
 from datetime import datetime
 import html
 import os
+import re
 
 from config import Config
 from database import DatabaseManager
 from pinterest_downloader import PinterestDownloader
+from gallery_dl_downloader import GalleryDLDownloader
 from localization import LocalizationManager
 
 # Setup logging
@@ -40,11 +42,17 @@ class PinterestBot:
     MAX_PHOTO_SIZE = 10 * 1024 * 1024  # 10 MB for photos
     MAX_VIDEO_SIZE = 50 * 1024 * 1024  # 50 MB for videos
     
+    # URL pattern for detection
+    URL_PATTERN = re.compile(
+        r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+    )
+    
     def __init__(self, bot):
         """Initialize bot components."""
         self.config = Config()
         self.db = DatabaseManager()
-        self.downloader = PinterestDownloader()
+        self.pinterest_downloader = PinterestDownloader()  # Only for search queries
+        self.gallery_downloader = GalleryDLDownloader()    # For all URLs
         self.localization = LocalizationManager()
         self.batch_size = Config.IMAGES_PER_BATCH
         self.bot = bot
@@ -53,6 +61,10 @@ class PinterestBot:
         # Check pinterest-dl
         if not PinterestDownloader.check_pinterest_dl():
             logger.warning("pinterest-dl not found. Please install it: pip install pinterest-dl")
+        
+        # Check gallery-dl
+        if not self.gallery_downloader._check_gallery_dl():
+            logger.warning("gallery-dl not found. Please install it: pip install gallery-dl")
         
         # Register handlers
         self.register_handlers()
@@ -128,6 +140,10 @@ class PinterestBot:
         minutes = int(seconds // 60)
         seconds = int(seconds % 60)
         return f"{minutes}:{seconds:02d}"
+    
+    def is_url(self, text: str) -> bool:
+        """Check if text is a URL."""
+        return bool(self.URL_PATTERN.match(text.strip()))
     
     def store_message_info(self, user_id: int, image_message_id: int, media_id: int, file_path: str):
         """Store message information for later reference."""
@@ -223,9 +239,9 @@ class PinterestBot:
         def handle_message(message):
             user = message.from_user
             user_id = self._get_user_id_from_message(message)
-            query = message.text.strip()
+            text = message.text.strip()
             
-            if not query:
+            if not text:
                 self.bot.reply_to(
                     message,
                     self.get_text('empty_query', message)
@@ -241,15 +257,12 @@ class PinterestBot:
                 language_code=self.localization.get_user_language(message)
             )
             
-            # Send initial status
-            status_msg = self.bot.reply_to(
-                message,
-                self.get_text('searching', message, query=query),
-                parse_mode='HTML'
-            )
-            
-            # Process search
-            self.process_search(message, query, status_msg)
+            # Check if it's a URL
+            if self.is_url(text):
+                self.handle_url(message, text)
+            else:
+                # Regular search query
+                self.process_search(message, text)
         
         @self.bot.callback_query_handler(func=lambda call: True)
         def handle_callback(call):
@@ -450,14 +463,6 @@ class PinterestBot:
                 show_alert=False
             )
             
-            # Send confirmation
-            '''
-            self.bot.send_message(
-                user_id,
-                self.get_text('message_removed', call.message),
-                parse_mode='HTML'
-            )'''
-            
         except Exception as e:
             logger.error(f"Error removing message: {e}")
             self.bot.answer_callback_query(
@@ -560,10 +565,162 @@ class PinterestBot:
                     parse_mode='HTML'
                 )
     
-    def process_search(self, message, query, status_msg):
-        """Process search query and initialize session with FIXED total_images."""
+    def handle_url(self, message, url: str):
+        """Handle URL input - uses gallery-dl for ALL URLs."""
+        user_id = self._get_user_id_from_message(message)
+        
+        # Send initial status
+        status_msg = self.bot.reply_to(
+            message,
+            self.get_text('processing_url', message, url=url),
+            parse_mode='HTML'
+        )
+        
+        # Check cache first
+        cached_search = self.db.get_cached_search(user_id, url)
+        search_cache_id = None
+        media_items = []
+        
+        if cached_search:
+            search_cache_id = cached_search['id']
+            logger.info(f"Found cached URL for user {user_id}: {url}")
+            
+            # Get total count from database
+            total_items = self.db.get_total_images_count(search_cache_id)
+            
+            # Get first batch
+            media_items = self.db.get_unsent_images(
+                search_cache_id,
+                self.batch_size,
+                0
+            )
+            
+            # Initialize session
+            self.db.update_user_session(
+                user_id=user_id,
+                search_cache_id=search_cache_id,
+                offset=len(media_items),
+                total_images=total_items,
+                last_query=url,
+                last_message_id=status_msg.message_id
+            )
+        
+        # If no cache or no items, download new ones
+        if not media_items:
+            try:
+                self.bot.edit_message_text(
+                    chat_id=user_id,
+                    message_id=status_msg.message_id,
+                    text=self.get_text('downloading_url', message, url=url),
+                    parse_mode='HTML'
+                )
+            except:
+                pass
+            
+            # Use gallery-dl for ALL URLs (including Pinterest)
+            downloaded = self.gallery_downloader.download_from_url(url, Config.MAX_IMAGES_PER_REQUEST)
+
+            if downloaded:
+                logger.info(f"Downloaded {len(downloaded)} items")
+                for item in downloaded:
+                    logger.info(f"Item: {item.get('file_name')} - path exists: {Path(item.get('local_path', '')).exists()}")
+            else:
+                logger.warning("No items downloaded")
+            
+            if not downloaded:
+                try:
+                    self.bot.edit_message_text(
+                        chat_id=user_id,
+                        message_id=status_msg.message_id,
+                        text=self.get_text('no_media_from_url', message),
+                        parse_mode='HTML'
+                    )
+                except:
+                    self.bot.reply_to(
+                        message,
+                        self.get_text('no_media_from_url', message),
+                        parse_mode='HTML'
+                    )
+                return
+            
+            # Create cache entry if needed
+            if not cached_search:
+                normalized = self.db.normalize_query(url)
+                query_md5 = self.db.get_query_md5(url)
+                search_cache_id = self.db.create_search_cache(
+                    user_id, url, normalized, query_md5
+                )
+            
+            if search_cache_id:
+                # Save downloaded items
+                saved = self.db.save_images_to_cache(search_cache_id, downloaded)
+                logger.info(f"Saved {saved} items to cache for URL {search_cache_id}")
+                
+                # Get final total count
+                total_items = self.db.get_total_images_count(search_cache_id)
+                
+                # Update cache with final total
+                self.db.update_search_cache_total(search_cache_id, total_items)
+                
+                # Get first batch
+                media_items = self.db.get_unsent_images(search_cache_id, self.batch_size, 0)
+                
+                # Initialize session
+                self.db.update_user_session(
+                    user_id=user_id,
+                    search_cache_id=search_cache_id,
+                    offset=len(media_items),
+                    total_images=total_items,
+                    last_query=url,
+                    last_message_id=status_msg.message_id
+                )
+        
+        if not media_items:
+            try:
+                self.bot.edit_message_text(
+                    chat_id=user_id,
+                    message_id=status_msg.message_id,
+                    text=self.get_text('no_media_available', message),
+                    parse_mode='HTML'
+                )
+            except:
+                self.bot.reply_to(
+                    message,
+                    self.get_text('no_media_available', message),
+                    parse_mode='HTML'
+                )
+            return
+        
+        # Delete status message
+        try:
+            self.bot.delete_message(user_id, status_msg.message_id)
+        except:
+            pass
+        
+        # Get session
+        session = self.db.get_user_session(user_id)
+        
+        # Send first batch
+        self.send_media_batch(
+            user_id,
+            media_items,
+            current_batch=1,
+            total_batches=(session['total_images'] + self.batch_size - 1) // self.batch_size,
+            search_cache_id=search_cache_id,
+            message=message
+        )
+    
+    def process_search(self, message, query):
+        """Process search query - uses pinterest-dl for text searches."""
         user = message.from_user
         user_id = self._get_user_id_from_message(message)
+        
+        # Send initial status
+        status_msg = self.bot.reply_to(
+            message,
+            self.get_text('searching', message, query=query),
+            parse_mode='HTML'
+        )
         
         # Check cache
         cached_search = self.db.get_cached_search(user_id, query)
@@ -584,7 +741,7 @@ class PinterestBot:
                 0
             )
             
-            # Initialize session with FIXED total_images
+            # Initialize session
             self.db.update_user_session(
                 user_id=user_id,
                 search_cache_id=search_cache_id,
@@ -606,8 +763,8 @@ class PinterestBot:
             except:
                 pass
             
-            # Download media (including videos)
-            downloaded = self.downloader.download_images(
+            # Use pinterest-dl for search queries
+            downloaded = self.pinterest_downloader.download_images(
                 query,
                 Config.MAX_IMAGES_PER_REQUEST,
                 include_videos=Config.INCLUDE_VIDEO
@@ -642,7 +799,7 @@ class PinterestBot:
                 saved = self.db.save_images_to_cache(search_cache_id, downloaded)
                 logger.info(f"Saved {saved} items to cache for search {search_cache_id}")
                 
-                # Get FINAL total count
+                # Get final total count
                 total_items = self.db.get_total_images_count(search_cache_id)
                 
                 # Update cache with final total
@@ -651,7 +808,7 @@ class PinterestBot:
                 # Get first batch
                 media_items = self.db.get_unsent_images(search_cache_id, self.batch_size, 0)
                 
-                # Initialize session with FIXED total_images
+                # Initialize session
                 self.db.update_user_session(
                     user_id=user_id,
                     search_cache_id=search_cache_id,
@@ -747,9 +904,16 @@ class PinterestBot:
                 original_file = item['local_path']
                 
                 if not display_file or not Path(display_file).exists():
+                    # If file not found, send download link
+                    base_url = os.getenv('BASE_URL', 'http://localhost:8000')
+                    file_name = item.get('file_name', 'unknown')
+                    download_link = f"{base_url}/download/{item['id']}/{file_name}"
+                    
                     self.bot.send_message(
                         user_id,
-                        self.get_text('file_not_found', message, filename=item.get('file_name', 'unknown'))
+                        self.get_text('file_not_found_with_link', message, 
+                                     filename=file_name, link=download_link),
+                        parse_mode='HTML'
                     )
                     continue
                 
@@ -833,15 +997,6 @@ class PinterestBot:
                             reply_markup=action_keyboard
                         )
                 
-                '''
-                # Send action buttons as a separate message
-                self.bot.send_message(
-                    user_id,
-                    self.get_text('actions_for', message, filename=file_name),
-                    parse_mode='HTML',
-                    reply_markup=action_keyboard
-                )'''
-                
                 # Store message info for later reference (for remove button)
                 self.store_message_info(user_id, sent_msg.message_id, media_id, original_path)
                 
@@ -849,9 +1004,16 @@ class PinterestBot:
                 
             except Exception as e:
                 logger.error(f"Error sending media: {e}")
+                # Send download link on error
+                base_url = os.getenv('BASE_URL', 'http://localhost:8000')
+                file_name = item.get('file_name', 'unknown')
+                download_link = f"{base_url}/download/{item['id']}/{file_name}"
+                
                 self.bot.send_message(
                     user_id,
-                    self.get_text('failed_to_send', message, filename=item.get('file_name', 'unknown'))
+                    self.get_text('failed_to_send_with_link', message, 
+                                 filename=file_name, link=download_link),
+                    parse_mode='HTML'
                 )
         
         # Get updated session
@@ -931,7 +1093,7 @@ class PinterestBot:
     
     def run(self):
         """Run the bot."""
-        logger.info("Starting Pinterest Bot with video support and action buttons...")
+        logger.info("Starting Pinterest Bot with video support and URL downloads...")
         print("\n" + "="*50)
         print("🤖 Pinterest Image & Video Bot Started")
         print("="*50)
@@ -940,7 +1102,12 @@ class PinterestBot:
         print(f"Supported languages: {', '.join(self.localization.LANGUAGES.values())}")
         if Config.INCLUDE_VIDEO:
             print(f"Video support: ✅ Enabled")
+        print(f"URL support: ✅ Enabled (gallery-dl)")
         print("="*50 + "\n")
+        
+        # Cleanup old downloads periodically
+        if hasattr(self, 'gallery_downloader'):
+            self.gallery_downloader.cleanup_old_downloads()
         
         self.bot.infinity_polling()
     

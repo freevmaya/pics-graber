@@ -301,56 +301,59 @@ class DatabaseManager:
             return cursor.lastrowid
         
         return self.execute_with_reconnect(_create_search_cache, commit=True, cursor_kwargs={})
+
+    
     
     def save_images_to_cache(self, search_cache_id: int, images: List[Dict]) -> int:
         """Save downloaded images to cache with preview paths."""
-        def _save_images_to_cache(cursor):
-            saved_count = 0
-            
-            for img in images:
-                try:
-                    cursor.execute("""
-                        INSERT INTO downloaded_images 
-                        (search_cache_id, image_url, local_path, preview_path, file_name, file_size, 
-                         width, height, image_type, caption)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON DUPLICATE KEY UPDATE
-                        local_path = VALUES(local_path),
-                        preview_path = VALUES(preview_path),
-                        file_size = VALUES(file_size),
-                        width = VALUES(width),
-                        height = VALUES(height),
-                        caption = VALUES(caption)
-                    """, (
-                        search_cache_id,
-                        img.get('url', ''),
-                        img.get('local_path'),
-                        img.get('preview_path'),
-                        img.get('file_name'),
-                        img.get('file_size'),
-                        img.get('width'),
-                        img.get('height'),
-                        img.get('type', 'image'),
-                        img.get('caption')
-                    ))
-                    saved_count += 1
-                except Error as e:
-                    logger.error(f"Error saving image: {e}")
-                    continue
-            
-            # Update total images count
-            cursor.execute("""
-                UPDATE search_cache 
-                SET total_images = (
-                    SELECT COUNT(*) FROM downloaded_images 
-                    WHERE search_cache_id = %s
-                )
-                WHERE id = %s
-            """, (search_cache_id, search_cache_id))
-            
-            return saved_count
+        cursor = self.connection.cursor()
+        saved_count = 0
         
-        return self.execute_with_reconnect(_save_images_to_cache, commit=True, cursor_kwargs={})
+        for img in images:
+            try:
+                #logger.info(img)
+                cursor.execute("""
+                    INSERT INTO downloaded_images 
+                    (search_cache_id, image_url, local_path, preview_path, file_name, file_size, 
+                     width, height, image_type, caption)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                    local_path = VALUES(local_path),
+                    preview_path = VALUES(preview_path),
+                    file_size = VALUES(file_size),
+                    width = VALUES(width),
+                    height = VALUES(height),
+                    caption = VALUES(caption)
+                """, (
+                    search_cache_id,
+                    img.get('url', ''),
+                    img.get('local_path'),
+                    img.get('preview_path'),  # NEW: save preview path
+                    img.get('file_name'),
+                    img.get('file_size'),
+                    img.get('width'),
+                    img.get('height'),
+                    img.get('type', 'image'),
+                    img.get('caption')
+                ))
+                saved_count += 1
+            except Error as e:
+                print(f"Error saving image: {e}")
+                continue
+        
+        # Update total images count
+        cursor.execute("""
+            UPDATE search_cache 
+            SET total_images = (
+                SELECT COUNT(*) FROM downloaded_images 
+                WHERE search_cache_id = %s
+            )
+            WHERE id = %s
+        """, (search_cache_id, search_cache_id))
+        
+        logger.info(f"Updated total_images for cache {search_cache_id} to {saved_count}")
+        self.connection.commit()
+        return saved_count
     
     def get_unsent_images(self, search_cache_id: int, limit: int, offset: int = 0) -> List[Dict]:
         """Get unsent images for pagination."""
