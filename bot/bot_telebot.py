@@ -1080,7 +1080,8 @@ class PinterestBot:
                                     logger.error(f"Error sending as document: {doc_error}")
                                     # Send just the link as last resort
                                     base_url = os.getenv('BASE_URL', 'http://localhost:8000')
-                                    download_link = f"{base_url}/download/{item['id']}/{file_name}"
+                                    relative_path = get_last_n_parts(item.get('local_path', 'unknown'))
+                                    download_link = f"{base_url}/{relative_path}"
                                     self.bot.send_message(
                                         user_id,
                                         self.get_text('failed_to_send_with_link', message, 
