@@ -51,7 +51,7 @@ class PinterestDownloader:
         # Create unique download directory for this query
         query_hash = hashlib.md5(query.encode()).hexdigest()[:8]
         safe_query = re.sub(r'[^\w\-_]', '_', query)[:30]
-        download_path = self.download_dir / f"search_{safe_query}_{query_hash}"
+        download_path = self.download_dir / f"search_{query_hash}"
         download_path.mkdir(exist_ok=True)
         
         # Build command for search

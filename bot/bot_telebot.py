@@ -28,6 +28,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def get_last_n_parts(path, n=2):
+    path_obj = Path(path)
+    parts = path_obj.parts[-n:]
+    return str(Path(*parts))
+
 class PinterestBot:
     """Main bot class with video support and action buttons."""
     
@@ -854,7 +860,7 @@ class PinterestBot:
         )
     
     def send_media_batch(self, user_id, media_items, current_batch, total_batches, 
-                        search_cache_id, message=None):
+                    search_cache_id, message=None):
         """Send a batch of media (images and videos) to user with action buttons."""
         if not media_items:
             self.bot.send_message(
@@ -884,137 +890,201 @@ class PinterestBot:
         )
         
         for item in media_items:
-            try:
-                # Determine which file to send (preview for display)
-                file_type = item.get('image_type', 'image')
-                
-                # For display, use preview if available (to save bandwidth)
-                display_file = None
-                if file_type == 'image' and Config.PREVIEW_ENABLED and item.get('preview_path'):
-                    preview_path = item['preview_path']
-                    if Path(preview_path).exists():
-                        display_file = preview_path
-                        logger.info(f"Sending preview: {preview_path}")
-                
-                # Fallback to original if preview missing or not available
-                if not display_file:
-                    display_file = item['local_path']
-                
-                # Get original file path for download/share
-                original_file = item['local_path']
-                
-                if not display_file or not Path(display_file).exists():
-                    # If file not found, send download link
-                    base_url = os.getenv('BASE_URL', 'http://localhost:8000')
-                    file_name = item.get('file_name', 'unknown')
-                    download_link = f"{base_url}/download/{item['id']}/{file_name}"
+            video_sent = False
+            max_attempts = 2
+            
+            for attempt in range(max_attempts):
+                try:
+                    # Determine which file to send (preview for display)
+                    file_type = item.get('image_type', 'image')
                     
-                    self.bot.send_message(
-                        user_id,
-                        self.get_text('file_not_found_with_link', message, 
-                                     filename=file_name, link=download_link),
-                        parse_mode='HTML'
-                    )
-                    continue
-                
-                # Get file size for caption
-                file_size = os.path.getsize(display_file) if Path(display_file).exists() else 0
-                
-                # Create caption with metadata
-                caption_parts = []
-                if item.get('caption'):
-                    caption_parts.append(item['caption'][:100])
-                
-                if file_type == 'video':
-                    # Add video info
-                    info = []
-                    if item.get('width') and item.get('height') and item['width'] > 0 and item['height'] > 0:
-                        info.append(f"{item['width']}x{item['height']}")
-                    if item.get('duration') and item['duration'] > 0:
-                        info.append(self.format_duration(item['duration']))
-                    if info:
-                        caption_parts.append(f"📹 {' • '.join(info)}")
-                elif file_type == 'image':
-                    # Add image info
-                    if item.get('width') and item.get('height') and item['width'] > 0 and item['height'] > 0:
-                        caption_parts.append(f"🖼️ {item['width']}x{item['height']}")
-                    if display_file != original_file:
-                        caption_parts.append("🔍 Preview")
-                
-                # Add file size
-                if file_size > 0:
-                    caption_parts.append(f"💾 {self.format_file_size(file_size)}")
-                
-                caption = ' | '.join(caption_parts) if caption_parts else None
-                
-                # Create action buttons for this specific media
-                media_id = item['id']
-                original_path = original_file
-                file_name = item['file_name']
-                
-                # Create inline keyboard with action buttons
-                action_keyboard = types.InlineKeyboardMarkup(row_width=3)
-                
-                # Download button - sends the original file
-                download_btn = types.InlineKeyboardButton(
-                    self.get_text('download_button', message),
-                    callback_data=f"download_{media_id}"
-                )
-                
-                # Share button - shares the original file
-                share_btn = types.InlineKeyboardButton(
-                    self.get_text('share_button', message),
-                    callback_data=f"share_{media_id}"
-                )
-                
-                # Remove button - deletes this message
-                remove_btn = types.InlineKeyboardButton(
-                    self.get_text('remove_button', message),
-                    callback_data=f"remove_{media_id}"
-                )
-                
-                # Add buttons to keyboard (all in one row)
-                action_keyboard.add(download_btn, share_btn, remove_btn)
-                
-                # Send the media based on type
-                with open(display_file, 'rb') as media_file:
-                    if file_type == 'video':
-                        # Send as video
-                        sent_msg = self.bot.send_video(
+                    # For display, use preview if available (to save bandwidth)
+                    display_file = None
+                    if file_type == 'image' and Config.PREVIEW_ENABLED and item.get('preview_path'):
+                        preview_path = item['preview_path']
+                        if Path(preview_path).exists():
+                            display_file = preview_path
+                            logger.info(f"Sending preview: {preview_path}")
+                    
+                    # Fallback to original if preview missing or not available
+                    if not display_file:
+                        display_file = item['local_path']
+                    
+                    # Get original file path for download/share
+                    original_file = item['local_path']
+                    file_name = item['file_name']
+                    
+                    if not display_file or not Path(display_file).exists():
+                        # If file not found, send download link
+                        base_url = os.getenv('BASE_URL', 'http://localhost:8000')
+                        download_link = f"{base_url}/download/{item['id']}/{file_name}"
+                        
+                        self.bot.send_message(
                             user_id,
-                            media_file,
-                            width=item.get('width') if item.get('width') and item['width'] > 0 else None,
-                            height=item.get('height') if item.get('height') and item['height'] > 0 else None,
-                            duration=int(item.get('duration')) if item.get('duration') and item['duration'] > 0 else None,
-                            supports_streaming=True,
-                            reply_markup=action_keyboard
+                            self.get_text('file_not_found_with_link', message, 
+                                         filename=file_name, link=download_link),
+                            parse_mode='HTML'
+                        )
+                        break
+                    
+                    # Get file size for caption
+                    file_size = os.path.getsize(display_file) if Path(display_file).exists() else 0
+                    
+                    # Create caption with metadata
+                    caption_parts = []
+                    if item.get('caption'):
+                        caption_parts.append(item['caption'][:100])
+                    
+                    if file_type == 'video':
+                        # Add video info
+                        info = []
+                        if item.get('width') and item.get('height') and item['width'] > 0 and item['height'] > 0:
+                            info.append(f"{item['width']}x{item['height']}")
+                        if item.get('duration') and item['duration'] > 0:
+                            info.append(self.format_duration(item['duration']))
+                        if info:
+                            caption_parts.append(f"📹 {' • '.join(info)}")
+                    elif file_type == 'image':
+                        # Add image info
+                        if item.get('width') and item.get('height') and item['width'] > 0 and item['height'] > 0:
+                            caption_parts.append(f"🖼️ {item['width']}x{item['height']}")
+                        if display_file != original_file:
+                            caption_parts.append("🔍 Preview")
+                    
+                    # Add file size
+                    if file_size > 0:
+                        caption_parts.append(f"💾 {self.format_file_size(file_size)}")
+                    
+                    caption = ' | '.join(caption_parts) if caption_parts else None
+                    
+                    # Create action buttons for this specific media
+                    media_id = item['id']
+                    
+                    # Create inline keyboard with action buttons
+                    action_keyboard = types.InlineKeyboardMarkup(row_width=3)
+                    
+                    # Download button - sends the original file
+                    download_btn = types.InlineKeyboardButton(
+                        self.get_text('download_button', message),
+                        callback_data=f"download_{media_id}"
+                    )
+                    
+                    # Share button - shares the original file
+                    share_btn = types.InlineKeyboardButton(
+                        self.get_text('share_button', message),
+                        callback_data=f"share_{media_id}"
+                    )
+                    
+                    # Remove button - deletes this message
+                    remove_btn = types.InlineKeyboardButton(
+                        self.get_text('remove_button', message),
+                        callback_data=f"remove_{media_id}"
+                    )
+                    
+                    # Add buttons to keyboard (all in one row)
+                    action_keyboard.add(download_btn, share_btn, remove_btn)
+                    
+                    # Send the media based on type
+                    if file_type == 'video':
+                        try:
+                            # First verify the file is readable
+                            if not os.access(display_file, os.R_OK):
+                                logger.error(f"Video file not readable: {display_file}")
+                                raise IOError(f"File not readable: {display_file}")
+                            
+                            # Log file details for debugging
+                            logger.info(f"Attempting to send video: {display_file}, size: {file_size} bytes")
+                            
+                            # Open file and send with increased timeout
+                            with open(display_file, 'rb') as media_file:
+                                # Read a small chunk to verify file is OK
+                                media_file.read(1)
+                                media_file.seek(0)
+                                
+                                sent_msg = self.bot.send_video(
+                                    user_id,
+                                    media_file,
+                                    width=item.get('width') if item.get('width') and item['width'] > 0 else None,
+                                    height=item.get('height') if item.get('height') and item['height'] > 0 else None,
+                                    duration=int(item.get('duration')) if item.get('duration') and item['duration'] > 0 else None,
+                                    supports_streaming=True,
+                                    caption=caption,
+                                    reply_markup=action_keyboard,
+                                    timeout=60  # Increase timeout
+                                )
+                            
+                            video_sent = True
+                            logger.info(f"Successfully sent video: {display_file}")
+                            
+                        except Exception as e:
+                            logger.error(f"Error sending video (attempt {attempt + 1}/{max_attempts}): {e}")
+                            
+                            if attempt == max_attempts - 1:  # Last attempt
+                                # Try to send as document instead
+                                try:
+                                    logger.info(f"Attempting to send as document instead: {display_file}")
+                                    with open(display_file, 'rb') as media_file:
+                                        sent_msg = self.bot.send_document(
+                                            user_id,
+                                            media_file,
+                                            visible_file_name=file_name,
+                                            caption=f"🎥 Video (send as file):\n{caption}" if caption else "🎥 Video",
+                                            reply_markup=action_keyboard,
+                                            timeout=60
+                                        )
+                                    video_sent = True
+                                    logger.info(f"Successfully sent video as document: {display_file}")
+                                except Exception as doc_error:
+                                    logger.error(f"Error sending as document: {doc_error}")
+                                    # Send just the link as last resort
+                                    base_url = os.getenv('BASE_URL', 'http://localhost:8000')
+                                    download_link = f"{base_url}/download/{item['id']}/{file_name}"
+                                    self.bot.send_message(
+                                        user_id,
+                                        self.get_text('failed_to_send_with_link', message, 
+                                                     filename=file_name, link=download_link),
+                                        parse_mode='HTML'
+                                    )
+                            else:
+                                # Wait before retry
+                                time.sleep(2)
+                                continue
+                        
+                    else:
+                        # Send as photo
+                        with open(display_file, 'rb') as media_file:
+                            sent_msg = self.bot.send_photo(
+                                user_id,
+                                media_file,
+                                caption=caption,
+                                reply_markup=action_keyboard,
+                                timeout=30
+                            )
+                        video_sent = True
+                    
+                    if video_sent:
+                        # Store message info for later reference (for remove button)
+                        self.store_message_info(user_id, sent_msg.message_id, media_id, original_file)
+                        break  # Exit retry loop on success
+                    
+                except Exception as e:
+                    logger.error(f"Error in send_media_batch: {e}")
+                    if attempt == max_attempts - 1:
+                        # Final attempt failed, send error message
+                        base_url = os.getenv('BASE_URL', 'http://localhost:8000')
+                        file_name = item.get('file_name', 'unknown')
+                        download_link = f"{base_url}/download/{item.get('id', '0')}/{file_name}"
+                        
+                        self.bot.send_message(
+                            user_id,
+                            self.get_text('failed_to_send_with_link', message, 
+                                         filename=file_name, link=download_link),
+                            parse_mode='HTML'
                         )
                     else:
-                        # Send as photo (using preview)
-                        sent_msg = self.bot.send_photo(
-                            user_id,
-                            media_file,
-                            reply_markup=action_keyboard
-                        )
-                
-                # Store message info for later reference (for remove button)
-                self.store_message_info(user_id, sent_msg.message_id, media_id, original_path)
-                
-                time.sleep(0.1)  # Delay to avoid flooding
-                
-            except Exception as e:
-                logger.error(f"Error sending media: {e}")
-                # Send download link on error
-                base_url = os.getenv('BASE_URL', 'http://localhost:8000')
-                file_name = item.get('file_name', 'unknown')
-                download_link = f"{base_url}/download/{item['id']}/{file_name}"
-                
-                self.bot.send_message(
-                    user_id,
-                    self.get_text('failed_to_send_with_link', message, 
-                                 filename=file_name, link=download_link),
-                    parse_mode='HTML'
-                )
+                        time.sleep(2)  # Wait before retry
+            
+            time.sleep(0.5)  # Delay between items to avoid flooding
         
         # Get updated session
         session = self.db.get_user_session(user_id)
