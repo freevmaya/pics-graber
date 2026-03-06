@@ -897,7 +897,7 @@ class PinterestBot:
         
         for item in media_items:
             video_sent = False
-            max_attempts = 2
+            max_attempts = 1
             
             # Check if we already have a file_id for this media
             existing_file_id = item.get('file_id')
